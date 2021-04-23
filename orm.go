@@ -58,6 +58,24 @@ func (v *Orm) Field(fields ...string) *Orm {
 
 func (v *Orm) transfOrmFields() string {
 	if len(v.fields) == 0 {
+		if v.dest != nil {
+			val := stringify.GetReflectValue(v.dest)
+			if val.Kind() == reflect.Slice {
+				val = stringify.GetReflectValue(val.Elem())
+			}
+
+			if val.Kind() == reflect.Struct {
+				fields := []string{}
+				for k := 0; k < val.NumField(); k++ {
+					name := val.Type().Field(k).Tag.Get("db")
+					if name == "" {
+						continue
+					}
+					fields = append(fields, name)
+				}
+				return v.Fields(fields).transfOrmFields()
+			}
+		}
 		return "*"
 	}
 	if v.rawFields {
@@ -71,85 +89,13 @@ func (v *Orm) RawFields(r bool) *Orm {
 	return v
 }
 
-func (v *Orm) Select() error {
-
-	sql := v.query
-	if !v.rawQuery {
-		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
-	}
-
-	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-
-	err = scanSlice(v.dest, rows)
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-
-	return nil
-}
-
-func (v *Orm) FetchOne() error {
-	sql := v.query
-	if !v.rawQuery {
-		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
-	}
-	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-
-	err = scanOne(v.dest, rows)
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-
-	return nil
-}
-
 func (v *Orm) Err() error {
 	return v.err
-}
-
-func (v *Orm) Count() int64 {
-	return v.RawFields(true).GetFieldInt("COUNT(1)")
 }
 
 func (v *Orm) setErr(e error) *Orm {
 	v.err = e
 	return v
-}
-
-func (v *Orm) GetField(name string) error {
-	v.Field(name)
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
-	err := v.db.QueryRow(sql, v.args...).Scan(v.dest)
-
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-	return nil
-}
-
-func (v *Orm) GetFieldString(name string) string {
-	var data string
-	v.Dest(&data).GetField(name)
-	return data
-}
-
-func (v *Orm) GetFieldInt(name string) int64 {
-	var data int64
-	v.Dest(&data).GetField(name)
-	return data
 }
 
 func (v *Orm) WhereStru(s interface{}) *Orm {
@@ -224,78 +170,6 @@ func (v *Orm) transfOrmQuery() string {
 	}
 
 	return set + where + query
-}
-
-func (v *Orm) GetFields(name string) error {
-	v.Field(name)
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
-	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
-
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-
-	value, err := getSlice(v.dest)
-	if err != nil {
-		v.setErr(err)
-		return err
-	}
-	base, isPtr := getSliceBase(value)
-
-	for rows.Next() {
-		b := reflect.New(base)
-		bv := stringify.GetReflectValue(b)
-		if bv.CanAddr() && bv.CanInterface() {
-			rows.Scan(bv.Addr().Interface())
-		}
-		if isPtr {
-			value.Set(reflect.Append(value, b))
-		} else {
-			value.Set(reflect.Append(value, bv))
-		}
-	}
-
-	return nil
-}
-
-func (v *Orm) GetFieldsString(name string) []string {
-	data := []string{}
-	v.Dest(&data).GetFields(name)
-	return data
-}
-
-func (v *Orm) GetFieldsInt(name string) []int64 {
-	data := []int64{}
-	v.Dest(&data).GetFields(name)
-	return data
-}
-
-func (v *Orm) Update() (int64, error) {
-	result, err := v.db.Exec("UPDATE "+v.table+v.transfOrmQuery(), v.args...)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
-}
-
-func (v *Orm) Insert() (int64, error) {
-	result, err := v.db.Exec("INSERT INTO "+v.table+v.transfOrmQuery(), v.args...)
-	if err != nil {
-		v.setErr(err)
-		return 0, err
-	}
-	return result.LastInsertId()
-}
-
-func (v *Orm) Delete() (int64, error) {
-	result, err := v.db.Exec("DELETE FROM "+v.table+v.transfOrmQuery(), v.args...)
-	if err != nil {
-		v.setErr(err)
-		return 0, err
-	}
-	return result.RowsAffected()
 }
 
 var (
