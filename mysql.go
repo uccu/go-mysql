@@ -10,8 +10,12 @@ type DB struct {
 	*sql.DB
 }
 
-func (v *DB) Table(name string) *Orm {
-	return &Orm{table: name, db: v}
+func (v *DB) Table(name ...string) *Orm {
+	var table string
+	if len(name) > 0 {
+		table = name[0]
+	}
+	return &Orm{table: table, db: v}
 }
 
 func Open(driverName, dataSourceName string) (*DB, error) {

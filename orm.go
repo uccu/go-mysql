@@ -13,6 +13,7 @@ import (
 type Orm struct {
 	db        *DB
 	table     string
+	rawQuery  bool
 	query     string
 	args      []interface{}
 	dest      interface{}
@@ -28,6 +29,15 @@ type Orm struct {
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
 	v.query = query
 	v.args = args
+	return v
+}
+
+func (v *Orm) RawQuery(b ...bool) *Orm {
+	if len(b) > 0 {
+		v.rawQuery = b[0]
+	} else {
+		v.rawQuery = true
+	}
 	return v
 }
 
@@ -62,7 +72,12 @@ func (v *Orm) RawFields(r bool) *Orm {
 }
 
 func (v *Orm) Select() error {
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
+
+	sql := v.query
+	if !v.rawQuery {
+		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
+	}
+
 	rows, err := v.db.Query(sql, v.args...)
 	defer rows.Close()
 	if err != nil {
@@ -80,7 +95,10 @@ func (v *Orm) Select() error {
 }
 
 func (v *Orm) FetchOne() error {
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
+	sql := v.query
+	if !v.rawQuery {
+		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
+	}
 	rows, err := v.db.Query(sql, v.args...)
 	defer rows.Close()
 	if err != nil {
@@ -306,20 +324,15 @@ func scanSlice(dest interface{}, rows *sql.Rows) error {
 		return NOT_STRU_IN_SLICE
 	}
 
-	columnTypesSlice, err := rows.ColumnTypes()
+	columns, err := rows.Columns()
 	if err != nil {
 		return err
-	}
-
-	columnMap := map[string]*column{}
-	for _, v := range columnTypesSlice {
-		columnMap[v.Name()] = &column{}
 	}
 
 	for rows.Next() {
 		r := reflect.New(base)
 		rv := stringify.GetReflectValue(r)
-		rows.Scan(generateScanData(rv, columnMap)...)
+		rows.Scan(generateScanData(rv, columns)...)
 
 		if isPtr {
 			value.Set(reflect.Append(value, r))
@@ -346,26 +359,26 @@ func scanOne(dest interface{}, rows *sql.Rows) error {
 		return NOT_STRU
 	}
 
-	columnTypesSlice, err := rows.ColumnTypes()
+	columns, err := rows.Columns()
 	if err != nil {
 		return err
-	}
-
-	columnMap := map[string]*column{}
-	for _, v := range columnTypesSlice {
-		columnMap[v.Name()] = &column{}
 	}
 
 	if !rows.Next() {
 		return NO_ROWS
 	}
-	rows.Scan(generateScanData(value, columnMap)...)
+	rows.Scan(generateScanData(value, columns)...)
 	return nil
 }
 
-func generateScanData(rv reflect.Value, columnMap map[string]*column) []interface{} {
+func generateScanData(rv reflect.Value, columns []string) []interface{} {
 
 	s := []interface{}{}
+
+	columnMap := map[string]*column{}
+	for _, v := range columns {
+		columnMap[v] = &column{}
+	}
 
 	for k := 0; k < rv.NumField(); k++ {
 		name := rv.Type().Field(k).Tag.Get("db")
@@ -381,11 +394,11 @@ func generateScanData(rv reflect.Value, columnMap map[string]*column) []interfac
 		}
 	}
 
-	for _, v := range columnMap {
-		if v.Dest == nil {
+	for _, v := range columns {
+		if columnMap[v].Dest == nil {
 			s = append(s, nil)
 		} else {
-			s = append(s, v.Dest)
+			s = append(s, columnMap[v].Dest)
 		}
 	}
 

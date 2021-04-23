@@ -52,6 +52,28 @@ func TestGetFields(t *testing.T) {
 
 }
 
+func TestFields(t *testing.T) {
+
+	dbpool, err := getPool()
+	if err != nil {
+		t.Error(err)
+	}
+
+	type User struct {
+		Id int64  `db:"id" json:"id"`
+		W  string `db:"user_nicename"`
+	}
+
+	e := User{}
+	err = dbpool.Table("cmf_users").Field("id").Fields([]string{"id"}).Query("WHERE id>?", 45175).Dest(&e).FetchOne()
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := json.Marshal(e)
+	log.Println("TestGetFields", string(b))
+
+}
+
 func TestGetFieldString(t *testing.T) {
 	dbpool, err := getPool()
 	if err != nil {
