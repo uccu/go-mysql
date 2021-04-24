@@ -11,7 +11,7 @@ func (v *Orm) Select() error {
 
 	sql := v.query
 	if !v.rawQuery {
-		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
+		sql = v.transformSelectSql()
 	}
 
 	rows, err := v.db.Query(sql, v.args...)
@@ -34,7 +34,7 @@ func (v *Orm) Select() error {
 func (v *Orm) FetchOne() error {
 	sql := v.query
 	if !v.rawQuery {
-		sql = "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
+		sql = v.transformSelectSql() + " LIMIT 1"
 	}
 	rows, err := v.db.Query(sql, v.args...)
 	defer rows.Close()
@@ -54,7 +54,8 @@ func (v *Orm) FetchOne() error {
 
 // 更新
 func (v *Orm) Update() (int64, error) {
-	result, err := v.db.Exec("UPDATE "+v.table+v.transfOrmQuery(), v.args...)
+	sql := "UPDATE " + v.transformTableName() + v.transformQuery()
+	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		return 0, err
 	}
@@ -63,7 +64,8 @@ func (v *Orm) Update() (int64, error) {
 
 // 插入
 func (v *Orm) Insert() (int64, error) {
-	result, err := v.db.Exec("INSERT INTO "+v.table+v.transfOrmQuery(), v.args...)
+	sql := "INSERT INTO " + v.transformTableName() + v.transformQuery()
+	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
 		return 0, err
@@ -73,7 +75,8 @@ func (v *Orm) Insert() (int64, error) {
 
 // 删除
 func (v *Orm) Delete() (int64, error) {
-	result, err := v.db.Exec("DELETE FROM "+v.table+v.transfOrmQuery(), v.args...)
+	sql := "DELETE FROM " + v.transformTableName() + v.transformQuery()
+	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
 		return 0, err
@@ -84,7 +87,7 @@ func (v *Orm) Delete() (int64, error) {
 // 获取单个字段的值
 func (v *Orm) GetField(name string) error {
 	v.Field(name)
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery() + " LIMIT 1"
+	sql := v.transformSelectSql() + " LIMIT 1"
 	err := v.db.QueryRow(sql, v.args...).Scan(v.dest)
 
 	if err != nil {
@@ -97,7 +100,7 @@ func (v *Orm) GetField(name string) error {
 // 获取单个字段的值的slice
 func (v *Orm) GetFields(name string) error {
 	v.Field(name)
-	sql := "SELECT " + v.transfOrmFields() + " FROM " + v.table + v.transfOrmQuery()
+	sql := v.transformSelectSql()
 	rows, err := v.db.Query(sql, v.args...)
 	defer rows.Close()
 

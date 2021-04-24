@@ -1,9 +1,7 @@
 package mysql
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"reflect"
 	"strings"
 
@@ -56,24 +54,26 @@ func (v *Orm) Field(fields ...string) *Orm {
 	return v
 }
 
-func (v *Orm) transfOrmFields() string {
+func (v *Orm) transformFields() string {
 	if len(v.fields) == 0 {
 		if v.dest != nil {
-			val := stringify.GetReflectValue(v.dest)
+			val := stringify.GetReflectValue(v.dest).Type()
 			if val.Kind() == reflect.Slice {
-				val = stringify.GetReflectValue(val.Elem())
+				val = val.Elem()
+				for val.Kind() == reflect.Ptr {
+					val = val.Elem()
+				}
 			}
 
 			if val.Kind() == reflect.Struct {
 				fields := []string{}
-				for k := 0; k < val.NumField(); k++ {
-					name := val.Type().Field(k).Tag.Get("db")
-					if name == "" {
-						continue
+				loopStructType(val, func(s reflect.StructField) {
+					name := s.Tag.Get("db")
+					if name != "" {
+						fields = append(fields, name)
 					}
-					fields = append(fields, name)
-				}
-				return v.Fields(fields).transfOrmFields()
+				})
+				return v.Fields(fields).transformFields()
 			}
 		}
 		return "*"
@@ -82,6 +82,14 @@ func (v *Orm) transfOrmFields() string {
 		return strings.Join(v.fields, ",")
 	}
 	return "`" + strings.Join(v.fields, "`,`") + "`"
+}
+
+func (v *Orm) transformTableName() string {
+	return "`" + v.db.GetPrefix() + v.table + "`"
+}
+
+func (v *Orm) transformSelectSql() string {
+	return "SELECT " + v.transformFields() + " FROM " + v.transformTableName() + v.transformQuery()
 }
 
 func (v *Orm) RawFields(r bool) *Orm {
@@ -150,7 +158,7 @@ func (v *Orm) Set(data map[string]interface{}) *Orm {
 	return v
 }
 
-func (v *Orm) transfOrmQuery() string {
+func (v *Orm) transformQuery() string {
 
 	where := ""
 	if len(v.wk) > 0 {
@@ -170,142 +178,4 @@ func (v *Orm) transfOrmQuery() string {
 	}
 
 	return set + where + query
-}
-
-var (
-	NOT_PTR           = errors.New("not pass a pointer")
-	NOT_SLI           = errors.New("not pass a slice")
-	NOT_STRU          = errors.New("not pass a struct")
-	NOT_STRU_IN_SLICE = errors.New("not pass a struct in slice")
-	NIL_PTR           = errors.New("pass a nil pointer")
-	NO_ROWS           = errors.New("no rows")
-)
-
-type column struct {
-	Dest interface{}
-}
-
-func scanSlice(dest interface{}, rows *sql.Rows) error {
-
-	value, err := getSlice(dest)
-	if err != nil {
-		return err
-	}
-
-	base, isPtr := getSliceBase(value)
-
-	if base.Kind() != reflect.Struct {
-		return NOT_STRU_IN_SLICE
-	}
-
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-
-	for rows.Next() {
-		r := reflect.New(base)
-		rv := stringify.GetReflectValue(r)
-		rows.Scan(generateScanData(rv, columns)...)
-
-		if isPtr {
-			value.Set(reflect.Append(value, r))
-		} else {
-			value.Set(reflect.Append(value, rv))
-		}
-	}
-
-	return nil
-
-}
-
-func scanOne(dest interface{}, rows *sql.Rows) error {
-
-	value := reflect.ValueOf(dest)
-
-	if value.Kind() != reflect.Ptr {
-		return NOT_PTR
-	}
-
-	value = stringify.GetReflectValue(value)
-
-	if value.Kind() != reflect.Struct {
-		return NOT_STRU
-	}
-
-	columns, err := rows.Columns()
-	if err != nil {
-		return err
-	}
-
-	if !rows.Next() {
-		return NO_ROWS
-	}
-	rows.Scan(generateScanData(value, columns)...)
-	return nil
-}
-
-func generateScanData(rv reflect.Value, columns []string) []interface{} {
-
-	s := []interface{}{}
-
-	columnMap := map[string]*column{}
-	for _, v := range columns {
-		columnMap[v] = &column{}
-	}
-
-	for k := 0; k < rv.NumField(); k++ {
-		name := rv.Type().Field(k).Tag.Get("db")
-		if name == "" {
-			continue
-		}
-
-		if column, ok := columnMap[name]; ok {
-			f := rv.Field(k)
-			if f.CanAddr() && f.CanInterface() {
-				column.Dest = f.Addr().Interface()
-			}
-		}
-	}
-
-	for _, v := range columns {
-		if columnMap[v].Dest == nil {
-			s = append(s, nil)
-		} else {
-			s = append(s, columnMap[v].Dest)
-		}
-	}
-
-	return s
-}
-
-func getSlice(dest interface{}) (reflect.Value, error) {
-	value := reflect.ValueOf(dest)
-
-	if value.Kind() != reflect.Ptr {
-		return reflect.Value{}, NOT_PTR
-	}
-
-	value = stringify.GetReflectValue(value)
-
-	if value.IsNil() {
-		return reflect.Value{}, NIL_PTR
-	}
-
-	if value.Kind() != reflect.Slice {
-		return reflect.Value{}, NOT_SLI
-	}
-
-	return value, nil
-}
-
-func getSliceBase(value reflect.Value) (base reflect.Type, isPtr bool) {
-
-	slice := value.Type()
-	base = slice.Elem()
-	isPtr = base.Kind() == reflect.Ptr
-	if isPtr {
-		base = base.Elem()
-	}
-	return
 }

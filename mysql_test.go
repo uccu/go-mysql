@@ -3,11 +3,13 @@ package mysql_test
 import (
 	"encoding/json"
 	"log"
+	"reflect"
 	"testing"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	. "github.com/uccu/go-mysql"
+	"github.com/uccu/go-stringify"
 )
 
 func getPool() (*DB, error) {
@@ -23,7 +25,7 @@ func getPool() (*DB, error) {
 		return nil, err
 	}
 
-	return dbpool, nil
+	return dbpool.Prefix("cmf_"), nil
 }
 
 func TestCount(t *testing.T) {
@@ -33,7 +35,7 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 	}
 
-	count := dbpool.Table("cmf_users").Count()
+	count := dbpool.GetOrm("users").Count()
 	log.Println("TestCount", count)
 
 }
@@ -46,7 +48,7 @@ func TestGetFields(t *testing.T) {
 	}
 
 	e := []*string{}
-	dbpool.Table("cmf_users").Query("WHERE id>?", 45175).Dest(&e).GetFields("create_time")
+	dbpool.GetOrm("users").Query("WHERE id>?", 45175).Dest(&e).GetFields("create_time")
 	b, _ := json.Marshal(e)
 	log.Println("TestGetFields", string(b))
 
@@ -65,7 +67,7 @@ func TestFields(t *testing.T) {
 	}
 
 	e := User{}
-	err = dbpool.Table("cmf_users").Field("id").Fields([]string{"id"}).Query("WHERE id>?", 45175).Dest(&e).FetchOne()
+	err = dbpool.GetOrm("users").Field("id").Fields([]string{"id"}).Query("WHERE id>?", 45175).Dest(&e).FetchOne()
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +82,7 @@ func TestGetFieldString(t *testing.T) {
 		t.Error(err)
 	}
 
-	data := dbpool.Table("cmf_users").Query("WHERE id=?", 45175).GetFieldString("user_nicename")
+	data := dbpool.GetOrm("users").Query("WHERE id=?", 45175).GetFieldString("user_nicename")
 	log.Println("TestGetFieldString", data)
 }
 
@@ -90,7 +92,7 @@ func TestGetFieldInt(t *testing.T) {
 		t.Error(err)
 	}
 
-	data := dbpool.Table("cmf_users").Query("WHERE id=?", 45175).GetFieldString("coin")
+	data := dbpool.GetOrm("users").Query("WHERE id=?", 45175).GetFieldString("coin")
 	log.Println("TestGetFieldInt", data)
 }
 
@@ -100,7 +102,7 @@ func TestUpdate(t *testing.T) {
 		t.Error(err)
 	}
 
-	data, err := dbpool.Table("cmf_users").Query("SET coin=coin+1 WHERE id=?", 45175).Update()
+	data, err := dbpool.GetOrm("users").Query("SET coin=coin+1 WHERE id=?", 45175).Update()
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,7 +115,7 @@ func TestInsert(t *testing.T) {
 		t.Error(err)
 	}
 
-	data, err := dbpool.Table("cmf_faq").Query("SET name=?,content=?", 123, 345).Insert()
+	data, err := dbpool.GetOrm("faq").Query("SET name=?,content=?", 123, 345).Insert()
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,7 +136,7 @@ func TestFetchOne(t *testing.T) {
 
 	user := &User{}
 
-	err = dbpool.Table("cmf_users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).FetchOne()
+	err = dbpool.GetOrm("users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).FetchOne()
 	if err != nil {
 		t.Error(err)
 	}
@@ -157,11 +159,62 @@ func TestSelect(t *testing.T) {
 
 	user := []*User{}
 
-	err = dbpool.Table("cmf_users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).Select()
+	err = dbpool.GetOrm("users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).Select()
 	if err != nil {
 		t.Error(err)
 	}
 	b, _ := json.Marshal(user)
 	log.Println("TestSelect", string(b))
 
+}
+
+type A struct {
+	Name string `db:"name"`
+}
+
+type B struct {
+	*A
+	Id int `db:"id"`
+}
+
+func Test5(t *testing.T) {
+
+	dest := []*B{}
+	val := stringify.GetReflectValue(dest).Type()
+	if val.Kind() == reflect.Slice {
+		val = val.Elem()
+		for val.Kind() == reflect.Ptr {
+			val = val.Elem()
+		}
+	}
+
+	if val.Kind() == reflect.Struct {
+		fields := []string{}
+
+		loopStruct(val, func(s reflect.StructField) {
+			name := s.Tag.Get("db")
+			if name != "" {
+				fields = append(fields, name)
+			}
+		})
+
+		log.Println(fields)
+	}
+}
+
+func loopStruct(val reflect.Type, f func(s reflect.StructField)) {
+	if val.Kind() != reflect.Struct {
+		return
+	}
+	for k := 0; k < val.NumField(); k++ {
+		ft := val.Field(k).Type
+		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
+			ft = ft.Elem()
+		}
+		if ft.Kind() == reflect.Struct {
+			loopStruct(ft, f)
+		} else {
+			f(val.Field(k))
+		}
+	}
 }
