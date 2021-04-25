@@ -78,12 +78,15 @@ func (v *Orm) transformFields() string {
 				loopStructType(val, func(s reflect.StructField) bool {
 					name := s.Tag.Get("db")
 					if name != "" {
-						fields = append(fields, name)
+						if name != "-" {
+							fields = append(fields, name)
+						}
 						return true
 					}
 					return false
 				})
-				return v.Fields(fields).transformFields()
+
+				return v.Fields(removeRep(fields)).transformFields()
 			}
 		}
 		return "*"

@@ -171,3 +171,16 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 		}
 	}
 }
+
+func removeRep(s []string) []string {
+	r := []string{}
+	t := map[string]bool{}
+	for _, e := range s {
+		l := len(t)
+		t[e] = false
+		if len(t) != l {
+			r = append(r, e)
+		}
+	}
+	return r
+}

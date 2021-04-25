@@ -147,9 +147,13 @@ func (v *Orm) GetFieldInt(name string) int64 {
 func (v *Orm) Count(val ...string) int64 {
 	field := "COUNT(1)"
 	if len(val) > 0 {
-		field = val[0]
+		field = "COUNT(" + val[0] + ")"
 	}
 	return v.RawFields(true).GetFieldInt(field)
+}
+
+func (v *Orm) Exist() bool {
+	return v.RawFields(true).GetFieldInt("1") != 0
 }
 
 func (v *Orm) GetFieldsString(name string) []string {
