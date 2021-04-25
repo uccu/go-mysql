@@ -90,14 +90,16 @@ func generateScanData(rv reflect.Value, columns []string) []interface{} {
 		columnMap[v] = &column{}
 	}
 
-	loopStruct(rv, func(v reflect.Value, s reflect.StructField) {
+	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
 		if name := s.Tag.Get("db"); name != "" {
 			if column, ok := columnMap[name]; ok {
 				if v.CanAddr() && v.CanInterface() {
 					column.Dest = v.Addr().Interface()
 				}
 			}
+			return true
 		}
+		return false
 	})
 
 	for _, v := range columns {
@@ -142,7 +144,7 @@ func getSliceBase(value reflect.Value) (base reflect.Type, isPtr bool) {
 	return
 }
 
-func loopStructType(val reflect.Type, f func(s reflect.StructField)) {
+func loopStructType(val reflect.Type, f func(s reflect.StructField) bool) {
 	if val.Kind() != reflect.Struct {
 		return
 	}
@@ -151,15 +153,15 @@ func loopStructType(val reflect.Type, f func(s reflect.StructField)) {
 		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
 			ft = ft.Elem()
 		}
-		if ft.Kind() == reflect.Struct {
+
+		if !f(val.Field(k)) && ft.Kind() == reflect.Struct {
 			loopStructType(ft, f)
-		} else {
-			f(val.Field(k))
 		}
+
 	}
 }
 
-func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField)) {
+func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField) bool) {
 	if val.Kind() != reflect.Struct {
 		return
 	}
@@ -168,10 +170,8 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
 			ft = ft.Elem()
 		}
-		if ft.Kind() == reflect.Struct {
+		if !f(val.Field(k), val.Type().Field(k)) && ft.Kind() == reflect.Struct {
 			loopStruct(ft, f)
-		} else {
-			f(val.Field(k), ft.Type().Field(k))
 		}
 	}
 }

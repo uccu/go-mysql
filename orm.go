@@ -67,11 +67,13 @@ func (v *Orm) transformFields() string {
 
 			if val.Kind() == reflect.Struct {
 				fields := []string{}
-				loopStructType(val, func(s reflect.StructField) {
+				loopStructType(val, func(s reflect.StructField) bool {
 					name := s.Tag.Get("db")
 					if name != "" {
 						fields = append(fields, name)
+						return true
 					}
+					return false
 				})
 				return v.Fields(fields).transformFields()
 			}
