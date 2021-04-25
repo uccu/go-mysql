@@ -22,6 +22,14 @@ type Orm struct {
 	wv        []interface{}
 	sk        []string
 	sv        []interface{}
+	subTable  bool
+	subValue  int64
+}
+
+func (v *Orm) SubValue(s int64) *Orm {
+	v.subTable = true
+	v.subValue = s
+	return v
 }
 
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
@@ -87,7 +95,11 @@ func (v *Orm) transformFields() string {
 }
 
 func (v *Orm) transformTableName() string {
-	return "`" + v.db.GetPrefix() + v.table + "`"
+	table := v.table
+	if v.subTable {
+		table = v.db.GetSubTable()(v.table, v.subValue)
+	}
+	return "`" + v.db.GetPrefix() + table + "`"
 }
 
 func (v *Orm) transformSelectSql() string {
@@ -164,13 +176,13 @@ func (v *Orm) transformQuery() string {
 
 	where := ""
 	if len(v.wk) > 0 {
-		v.args = append(v.wv, v.args)
+		v.args = append(v.wv, v.args...)
 		where = " WHERE `" + strings.Join(v.wk, "`=? AND `") + "`=?"
 	}
 
 	set := ""
 	if len(v.sk) > 0 {
-		v.args = append(v.sv, v.args)
+		v.args = append(v.sv, v.args...)
 		set = " SET `" + strings.Join(v.sk, "`=?,`") + "`=?"
 	}
 

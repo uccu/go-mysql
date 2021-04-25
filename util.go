@@ -103,11 +103,7 @@ func generateScanData(rv reflect.Value, columns []string) []interface{} {
 	})
 
 	for _, v := range columns {
-		if columnMap[v].Dest == nil {
-			s = append(s, nil)
-		} else {
-			s = append(s, columnMap[v].Dest)
-		}
+		s = append(s, columnMap[v].Dest)
 	}
 
 	return s

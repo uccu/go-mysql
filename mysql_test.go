@@ -218,3 +218,13 @@ func loopStruct(val reflect.Type, f func(s reflect.StructField)) {
 		}
 	}
 }
+
+func Test6(t *testing.T) {
+
+	var i []interface{}
+
+	i = append(i, 1)
+
+	log.Println(i)
+
+}
