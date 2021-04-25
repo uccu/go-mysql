@@ -97,9 +97,9 @@ func (v *Orm) transformFields() string {
 func (v *Orm) transformTableName() string {
 	table := v.table
 	if v.subTable {
-		table = v.db.GetSubTable()(v.table, v.subValue)
+		table = v.db.subTable(v.table, v.subValue)
 	}
-	return "`" + v.db.GetPrefix() + table + "`"
+	return "`" + v.db.prefix + table + "`"
 }
 
 func (v *Orm) transformSelectSql() string {
@@ -117,6 +117,9 @@ func (v *Orm) Err() error {
 
 func (v *Orm) setErr(e error) *Orm {
 	v.err = e
+	if v.db.errHandle != nil {
+		v.db.errHandle(e)
+	}
 	return v
 }
 
@@ -150,7 +153,9 @@ func (v *Orm) SetStru(s interface{}) *Orm {
 	m, _ := json.Marshal(s)
 	p := map[string]interface{}{}
 	err := json.Unmarshal(m, &p)
-	v.setErr(err)
+	if err != nil {
+		v.setErr(err)
+	}
 	return v.Set(p)
 }
 

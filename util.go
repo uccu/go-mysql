@@ -14,7 +14,7 @@ var (
 	NOT_STRU          = errors.New("not pass a struct")
 	NOT_STRU_IN_SLICE = errors.New("not pass a struct in slice")
 	NIL_PTR           = errors.New("pass a nil pointer")
-	NO_ROWS           = errors.New("no rows")
+	NO_ROWS           = sql.ErrNoRows
 )
 
 type column struct {
