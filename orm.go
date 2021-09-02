@@ -134,6 +134,21 @@ func (v *Orm) WhereStru(s interface{}) *Orm {
 	return v.Where(p)
 }
 
+func (v *Orm) WhereMap(s ...interface{}) *Orm {
+
+	p := map[string]interface{}{}
+	if len(s)%2 == 1 {
+		v.setErr(ODD_PARAM)
+	} else {
+		for k := range s {
+			if k%2 == 1 {
+				p[stringify.ToString(s[k-1])] = s[k]
+			}
+		}
+	}
+	return v.Where(p)
+}
+
 func (v *Orm) Where(data map[string]interface{}) *Orm {
 
 	if v.wk == nil {

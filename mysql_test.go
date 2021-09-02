@@ -228,3 +228,25 @@ func Test6(t *testing.T) {
 	log.Println(i)
 
 }
+
+func TestWhereMap(t *testing.T) {
+
+	dbpool, err := getPool()
+	if err != nil {
+		t.Error(err)
+	}
+
+	type User struct {
+		Id int64 `db:"id" json:"id"`
+	}
+
+	user := &User{}
+
+	err = dbpool.GetOrm("user").Dest(user).WhereMap("id", 2).FetchOne()
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := json.Marshal(user)
+	log.Println("TestWhereMap", string(b))
+
+}

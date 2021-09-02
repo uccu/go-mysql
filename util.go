@@ -14,6 +14,7 @@ var (
 	NOT_STRU          = errors.New("not pass a struct")
 	NOT_STRU_IN_SLICE = errors.New("not pass a struct in slice")
 	NIL_PTR           = errors.New("pass a nil pointer")
+	ODD_PARAM         = errors.New("Odd number of parameters")
 	NO_ROWS           = sql.ErrNoRows
 )
 

@@ -15,11 +15,11 @@ func (v *Orm) Select() error {
 	}
 
 	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
+	defer rows.Close()
 
 	err = scanSlice(v.dest, rows)
 	if err != nil {
@@ -37,11 +37,11 @@ func (v *Orm) FetchOne() error {
 		sql = v.transformSelectSql() + " LIMIT 1"
 	}
 	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
+	defer rows.Close()
 
 	err = scanOne(v.dest, rows)
 	if err != nil {
@@ -102,12 +102,11 @@ func (v *Orm) GetFields(name string) error {
 	v.Field(name)
 	sql := v.transformSelectSql()
 	rows, err := v.db.Query(sql, v.args...)
-	defer rows.Close()
-
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
+	defer rows.Close()
 
 	value, err := getSlice(v.dest)
 	if err != nil {
