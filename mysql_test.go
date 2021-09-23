@@ -25,7 +25,7 @@ func getPool() (*DB, error) {
 		return nil, err
 	}
 
-	return dbpool.Prefix("cmf_"), nil
+	return dbpool.Prefix("b_"), nil
 }
 
 func TestCount(t *testing.T) {
@@ -248,5 +248,38 @@ func TestWhereMap(t *testing.T) {
 	}
 	b, _ := json.Marshal(user)
 	log.Println("TestWhereMap", string(b))
+
+}
+
+type UserSimple struct {
+	Id   int    `dbwhere:"id"`
+	Name string `dbset:"name"`
+}
+
+type User struct {
+	*UserSimple
+}
+
+func TestPointer(t *testing.T) {
+
+	dbpool, err := getPool()
+	if err != nil {
+		t.Error(err)
+	}
+
+	user := new(User)
+	user.UserSimple = new(UserSimple)
+	user.Id = 57
+	user.Name = "dde"
+
+	dbpool.GetOrm("user").Dest(user).WhereStru(user).SetStru(user).Update()
+
+	if user.Id != 57 {
+		t.Error("id not right")
+	}
+
+}
+
+func TestNilPointer(t *testing.T) {
 
 }

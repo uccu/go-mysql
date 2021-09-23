@@ -15,6 +15,7 @@ var (
 	NOT_STRU_IN_SLICE = errors.New("not pass a struct in slice")
 	NIL_PTR           = errors.New("pass a nil pointer")
 	ODD_PARAM         = errors.New("Odd number of parameters")
+	NO_DB_TAG         = errors.New("no db tag")
 	NO_ROWS           = sql.ErrNoRows
 )
 
@@ -165,6 +166,13 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 	for k := 0; k < val.NumField(); k++ {
 		ft := val.Field(k)
 		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
+			if ft.Kind() == reflect.Ptr {
+				if ft.Type().Elem().Kind() == reflect.Struct {
+					if ft.Elem().Kind() == reflect.Invalid {
+						ft.Set(reflect.New(ft.Type().Elem()))
+					}
+				}
+			}
 			ft = ft.Elem()
 		}
 		if !f(val.Field(k), val.Type().Field(k)) && ft.Kind() == reflect.Struct {

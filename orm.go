@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -85,6 +84,11 @@ func (v *Orm) transformFields() string {
 					}
 					return false
 				})
+				fields = removeRep(fields)
+				if len(fields) == 0 {
+					v.setErr(NO_DB_TAG)
+					return "1"
+				}
 
 				return v.Fields(removeRep(fields)).transformFields()
 			}
@@ -127,10 +131,26 @@ func (v *Orm) setErr(e error) *Orm {
 }
 
 func (v *Orm) WhereStru(s interface{}) *Orm {
-	m, _ := json.Marshal(s)
 	p := map[string]interface{}{}
-	err := json.Unmarshal(m, &p)
-	v.setErr(err)
+	rv := stringify.GetReflectValue(s)
+	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
+		db := s.Tag.Get("db")
+		dbset := s.Tag.Get("dbwhere")
+		if dbset != "" {
+			db = dbset
+		}
+		if db == "-" {
+			return true
+		}
+		if db == "" {
+			return false
+		}
+		if v.CanAddr() && v.CanInterface() {
+			p[db] = v.Addr().Interface()
+			return true
+		}
+		return false
+	})
 	return v.Where(p)
 }
 
@@ -168,12 +188,26 @@ func (v *Orm) Where(data map[string]interface{}) *Orm {
 }
 
 func (v *Orm) SetStru(s interface{}) *Orm {
-	m, _ := json.Marshal(s)
 	p := map[string]interface{}{}
-	err := json.Unmarshal(m, &p)
-	if err != nil {
-		v.setErr(err)
-	}
+	rv := stringify.GetReflectValue(s)
+	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
+		db := s.Tag.Get("db")
+		dbset := s.Tag.Get("dbset")
+		if dbset != "" {
+			db = dbset
+		}
+		if db == "-" {
+			return true
+		}
+		if db == "" {
+			return false
+		}
+		if v.CanAddr() && v.CanInterface() {
+			p[db] = v.Addr().Interface()
+			return true
+		}
+		return false
+	})
 	return v.Set(p)
 }
 
