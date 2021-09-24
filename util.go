@@ -165,6 +165,10 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 	}
 	for k := 0; k < val.NumField(); k++ {
 		ft := val.Field(k)
+		if f(ft, val.Type().Field(k)) {
+			continue
+		}
+
 		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
 			if ft.Kind() == reflect.Ptr {
 				if ft.Type().Elem().Kind() == reflect.Struct {
@@ -175,7 +179,7 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 			}
 			ft = ft.Elem()
 		}
-		if !f(val.Field(k), val.Type().Field(k)) && ft.Kind() == reflect.Struct {
+		if ft.Kind() == reflect.Struct {
 			loopStruct(ft, f)
 		}
 	}
@@ -192,4 +196,17 @@ func removeRep(s []string) []string {
 		}
 	}
 	return r
+}
+
+func sliceToMap(s []interface{}) (map[string]interface{}, error) {
+	p := map[string]interface{}{}
+	if len(s)%2 == 1 {
+		return p, ODD_PARAM
+	}
+	for k := range s {
+		if k%2 == 1 {
+			p[stringify.ToString(s[k-1])] = s[k]
+		}
+	}
+	return p, nil
 }

@@ -156,17 +156,27 @@ func (v *Orm) WhereStru(s interface{}) *Orm {
 
 func (v *Orm) WhereMap(s ...interface{}) *Orm {
 
-	p := map[string]interface{}{}
 	if len(s)%2 == 1 {
 		v.setErr(ODD_PARAM)
-	} else {
-		for k := range s {
-			if k%2 == 1 {
-				p[stringify.ToString(s[k-1])] = s[k]
-			}
+		return v
+	}
+
+	if v.wk == nil {
+		v.wk = make([]string, 0)
+	}
+
+	if v.wv == nil {
+		v.wv = make([]interface{}, 0)
+	}
+
+	for k, vs := range s {
+		if k%2 == 0 {
+			v.wk = append(v.wk, stringify.ToString(vs))
+		} else {
+			v.wv = append(v.wv, vs)
 		}
 	}
-	return v.Where(p)
+	return v
 }
 
 func (v *Orm) Where(data map[string]interface{}) *Orm {
@@ -227,6 +237,14 @@ func (v *Orm) Set(data map[string]interface{}) *Orm {
 	}
 
 	return v
+}
+
+func (v *Orm) SetMap(s ...interface{}) *Orm {
+	p, err := sliceToMap(s)
+	if err != nil {
+		v.setErr(err)
+	}
+	return v.Set(p)
 }
 
 func (v *Orm) transformQuery() string {
