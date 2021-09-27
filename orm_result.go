@@ -132,15 +132,21 @@ func (v *Orm) GetFields(name string) error {
 }
 
 func (v *Orm) GetFieldString(name string) string {
-	var data string
+	var data *string
 	v.Dest(&data).GetField(name)
-	return data
+	if data == nil {
+		return ""
+	}
+	return *data
 }
 
 func (v *Orm) GetFieldInt(name string) int64 {
-	var data int64
+	var data *int64
 	v.Dest(&data).GetField(name)
-	return data
+	if data == nil {
+		return 0
+	}
+	return *data
 }
 
 func (v *Orm) Count(val ...string) int64 {
