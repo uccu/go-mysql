@@ -57,6 +57,7 @@ func (v *Orm) Update() (int64, error) {
 	sql := "UPDATE " + v.transformTableName() + v.transformQuery()
 	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
+		v.setErr(err)
 		return 0, err
 	}
 	return result.RowsAffected()
