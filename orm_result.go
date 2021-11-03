@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"reflect"
+	"regexp"
 
 	"github.com/uccu/go-stringify"
 )
@@ -34,7 +35,13 @@ func (v *Orm) Select() error {
 func (v *Orm) FetchOne() error {
 	sql := v.query
 	if !v.rawQuery {
-		sql = v.transformSelectSql() + " LIMIT 1"
+		sql = v.transformSelectSql()
+		r, _ := regexp.Compile(`(?i)(LIMIT +\d+ *)$`)
+		if r.MatchString(sql) {
+			sql = r.ReplaceAllString(sql, "LIMIT 1")
+		} else {
+			sql += " LIMIT 1"
+		}
 	}
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
@@ -88,7 +95,13 @@ func (v *Orm) Delete() (int64, error) {
 // 获取单个字段的值
 func (v *Orm) GetField(name string) error {
 	v.Field(name)
-	sql := v.transformSelectSql() + " LIMIT 1"
+	sql := v.transformSelectSql()
+	r, _ := regexp.Compile(`(?i)(LIMIT +\d+ *)$`)
+	if r.MatchString(sql) {
+		sql = r.ReplaceAllString(sql, "LIMIT 1")
+	} else {
+		sql += " LIMIT 1"
+	}
 	err := v.db.QueryRow(sql, v.args...).Scan(v.dest)
 
 	if err != nil {
