@@ -13,7 +13,7 @@ import (
 )
 
 func getPool() (*DB, error) {
-	dbpool, err := Open("mysql", "")
+	dbpool, err := Open("mysql", "billiards:HkhD3wyYxKM2JLh5@tcp(60.205.184.251:3306)/billiards?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
 	if err != nil {
 		return nil, err
 	}
@@ -281,5 +281,15 @@ func TestPointer(t *testing.T) {
 }
 
 func TestNilPointer(t *testing.T) {
+	dbpool, err := getPool()
+	if err != nil {
+		t.Error(err)
+	}
 
+	orm := dbpool.GetOrm("order").RawFields(true)
+
+	total := orm.GetFieldString("SUM(price_total)")
+
+	log.Println(orm.Err())
+	log.Println(total)
 }

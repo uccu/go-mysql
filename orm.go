@@ -3,26 +3,28 @@ package mysql
 import (
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/uccu/go-stringify"
 )
 
 type Orm struct {
-	db        *DB
-	table     string
-	rawQuery  bool
-	query     string
-	args      []interface{}
-	dest      interface{}
-	fields    []string
-	err       error
-	rawFields bool
-	wk        []string
-	wv        []interface{}
-	sk        []string
-	sv        []interface{}
-	subTable  bool
-	subValue  int64
+	db             *DB
+	table          string
+	rawQuery       bool
+	query          string
+	args           []interface{}
+	dest           interface{}
+	fields         []string
+	err            error
+	rawFields      bool
+	wk             []string
+	wv             []interface{}
+	sk             []string
+	sv             []interface{}
+	subTable       bool
+	subValue       int64
+	StartQueryTime time.Time
 }
 
 func (v *Orm) SubValue(s int64) *Orm {
@@ -124,8 +126,8 @@ func (v *Orm) Err() error {
 
 func (v *Orm) setErr(e error) *Orm {
 	v.err = e
-	if v.db.errHandle != nil {
-		v.db.errHandle(e)
+	if v.db.errHandler != nil {
+		v.db.errHandler(e)
 	}
 	return v
 }

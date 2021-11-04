@@ -3,6 +3,7 @@ package mysql
 import (
 	"reflect"
 	"regexp"
+	"time"
 
 	"github.com/uccu/go-stringify"
 )
@@ -14,12 +15,17 @@ func (v *Orm) Select() error {
 	if !v.rawQuery {
 		sql = v.transformSelectSql()
 	}
-
+	v.StartQueryTime = time.Now()
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
+
+	if v.db.afterQueryHandler != nil {
+		v.db.afterQueryHandler(v)
+	}
+
 	defer rows.Close()
 
 	err = scanSlice(v.dest, rows)
@@ -43,10 +49,14 @@ func (v *Orm) FetchOne() error {
 			sql += " LIMIT 1"
 		}
 	}
+	v.StartQueryTime = time.Now()
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
 		return err
+	}
+	if v.db.afterQueryHandler != nil {
+		v.db.afterQueryHandler(v)
 	}
 	defer rows.Close()
 
@@ -102,11 +112,15 @@ func (v *Orm) GetField(name string) error {
 	} else {
 		sql += " LIMIT 1"
 	}
+	v.StartQueryTime = time.Now()
 	err := v.db.QueryRow(sql, v.args...).Scan(v.dest)
 
 	if err != nil {
 		v.setErr(err)
 		return err
+	}
+	if v.db.afterQueryHandler != nil {
+		v.db.afterQueryHandler(v)
 	}
 	return nil
 }
@@ -115,10 +129,14 @@ func (v *Orm) GetField(name string) error {
 func (v *Orm) GetFields(name string) error {
 	v.Field(name)
 	sql := v.transformSelectSql()
+	v.StartQueryTime = time.Now()
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
 		return err
+	}
+	if v.db.afterQueryHandler != nil {
+		v.db.afterQueryHandler(v)
 	}
 	defer rows.Close()
 

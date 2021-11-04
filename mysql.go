@@ -4,9 +4,10 @@ import "database/sql"
 
 type DB struct {
 	*sql.DB
-	prefix    string
-	subTable  func(table string, n int64) string
-	errHandle func(error)
+	prefix            string
+	subTable          func(table string, n int64) string
+	errHandler        func(error)
+	afterQueryHandler func(*Orm)
 }
 
 func (v *DB) GetOrm(name ...string) *Orm {
@@ -23,7 +24,12 @@ func (v *DB) Prefix(p string) *DB {
 }
 
 func (v *DB) ErrHandle(p func(error)) *DB {
-	v.errHandle = p
+	v.errHandler = p
+	return v
+}
+
+func (v *DB) AfterQueryHandle(p func(*Orm)) *DB {
+	v.afterQueryHandler = p
 	return v
 }
 
