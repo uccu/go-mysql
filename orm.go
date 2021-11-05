@@ -25,6 +25,7 @@ type Orm struct {
 	subTable       bool
 	subValue       int64
 	StartQueryTime time.Time
+	Sql            string
 }
 
 func (v *Orm) SubValue(s int64) *Orm {
@@ -147,8 +148,8 @@ func (v *Orm) WhereStru(s interface{}) *Orm {
 		if db == "" {
 			return false
 		}
-		if v.CanAddr() && v.CanInterface() {
-			p[db] = v.Addr().Interface()
+		if v.CanInterface() {
+			p[db] = v.Interface()
 			return true
 		}
 		return false
@@ -214,8 +215,8 @@ func (v *Orm) SetStru(s interface{}) *Orm {
 		if db == "" {
 			return false
 		}
-		if v.CanAddr() && v.CanInterface() {
-			p[db] = v.Addr().Interface()
+		if v.CanInterface() {
+			p[db] = v.Interface()
 			return true
 		}
 		return false
@@ -269,4 +270,8 @@ func (v *Orm) transformQuery() string {
 	}
 
 	return set + where + query
+}
+
+func (v *Orm) GetArgs() []interface{} {
+	return v.args
 }

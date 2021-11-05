@@ -16,6 +16,7 @@ func (v *Orm) Select() error {
 		sql = v.transformSelectSql()
 	}
 	v.StartQueryTime = time.Now()
+	v.Sql = sql
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
@@ -50,6 +51,7 @@ func (v *Orm) FetchOne() error {
 		}
 	}
 	v.StartQueryTime = time.Now()
+	v.Sql = sql
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
@@ -113,15 +115,23 @@ func (v *Orm) GetField(name string) error {
 		sql += " LIMIT 1"
 	}
 	v.StartQueryTime = time.Now()
-	err := v.db.QueryRow(sql, v.args...).Scan(v.dest)
+	v.Sql = sql
+	row := v.db.QueryRow(sql, v.args...)
+	if row.Err() != nil {
+		v.setErr(row.Err())
+		return row.Err()
+	}
 
+	if v.db.afterQueryHandler != nil {
+		v.db.afterQueryHandler(v)
+	}
+
+	err := row.Scan(v.dest)
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
-	if v.db.afterQueryHandler != nil {
-		v.db.afterQueryHandler(v)
-	}
+
 	return nil
 }
 
@@ -130,6 +140,7 @@ func (v *Orm) GetFields(name string) error {
 	v.Field(name)
 	sql := v.transformSelectSql()
 	v.StartQueryTime = time.Now()
+	v.Sql = sql
 	rows, err := v.db.Query(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
