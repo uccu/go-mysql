@@ -9,9 +9,11 @@ import (
 )
 
 type Orm struct {
-	db             *DB
-	table          string
-	rawQuery       bool
+	db     *DB
+	tables Tables
+
+	conditions Conditions
+
 	query          string
 	args           []interface{}
 	dest           interface{}
@@ -28,24 +30,17 @@ type Orm struct {
 	Sql            string
 }
 
-func (v *Orm) SubValue(s int64) *Orm {
-	v.subTable = true
-	v.subValue = s
+func (v *Orm) WhereRaw(query string, args ...interface{}) *Orm {
+	if v.conditions == nil {
+		v.conditions = make(Conditions, 0)
+	}
+	v.conditions = append(v.conditions, RawCondition(query, args...))
 	return v
 }
 
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
 	v.query = query
 	v.args = args
-	return v
-}
-
-func (v *Orm) RawQuery(b ...bool) *Orm {
-	if len(b) > 0 {
-		v.rawQuery = b[0]
-	} else {
-		v.rawQuery = true
-	}
 	return v
 }
 
@@ -104,16 +99,8 @@ func (v *Orm) transformFields() string {
 	return "`" + strings.Join(v.fields, "`,`") + "`"
 }
 
-func (v *Orm) transformTableName() string {
-	table := v.table
-	if v.subTable {
-		table = v.db.subTable(v.table, v.subValue)
-	}
-	return "`" + v.db.prefix + table + "`"
-}
-
 func (v *Orm) transformSelectSql() string {
-	return "SELECT " + v.transformFields() + " FROM " + v.transformTableName() + v.transformQuery()
+	return "SELECT " + v.transformFields() + " FROM " + v.tables.GetQuery() + v.transformQuery()
 }
 
 func (v *Orm) RawFields(r bool) *Orm {

@@ -12,7 +12,7 @@ import (
 func (v *Orm) Select() error {
 
 	sql := v.query
-	if !v.rawQuery {
+	if v.tables != nil {
 		sql = v.transformSelectSql()
 	}
 	v.StartQueryTime = time.Now()
@@ -41,7 +41,7 @@ func (v *Orm) Select() error {
 // 获取单条数据
 func (v *Orm) FetchOne() error {
 	sql := v.query
-	if !v.rawQuery {
+	if v.tables != nil {
 		sql = v.transformSelectSql()
 		r, _ := regexp.Compile(`(?i)(LIMIT +\d+ *)$`)
 		if r.MatchString(sql) {
@@ -73,7 +73,7 @@ func (v *Orm) FetchOne() error {
 
 // 更新
 func (v *Orm) Update() (int64, error) {
-	sql := "UPDATE " + v.transformTableName() + v.transformQuery()
+	sql := "UPDATE " + v.tables.GetQuery() + v.transformQuery()
 	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
@@ -84,7 +84,7 @@ func (v *Orm) Update() (int64, error) {
 
 // 插入
 func (v *Orm) Insert() (int64, error) {
-	sql := "INSERT INTO " + v.transformTableName() + v.transformQuery()
+	sql := "INSERT INTO " + v.tables.GetQuery() + v.transformQuery()
 	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		v.setErr(err)
@@ -95,7 +95,7 @@ func (v *Orm) Insert() (int64, error) {
 
 // 删除
 func (v *Orm) Delete() (int64, error) {
-	sql := "DELETE FROM " + v.transformTableName() + v.transformQuery()
+	sql := "DELETE FROM " + v.tables.GetQuery() + v.transformQuery()
 	result, err := v.db.Exec(sql, v.args...)
 	if err != nil {
 		v.setErr(err)

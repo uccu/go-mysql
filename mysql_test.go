@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	. "github.com/uccu/go-mysql"
 	"github.com/uccu/go-stringify"
 )
@@ -25,7 +24,7 @@ func getPool() (*DB, error) {
 		return nil, err
 	}
 
-	return dbpool.Prefix("b_"), nil
+	return dbpool.WithPrefix("b_"), nil
 }
 
 func TestCount(t *testing.T) {
