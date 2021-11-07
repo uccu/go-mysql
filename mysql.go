@@ -4,6 +4,8 @@ import (
 	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/uccu/go-mysql/mx"
+	"github.com/uccu/go-mysql/table"
 )
 
 type DB struct {
@@ -15,9 +17,9 @@ type DB struct {
 }
 
 func (v *DB) GetOrm(s ...interface{}) *Orm {
-	tables := Tables{}
+	tables := mx.Tables{}
 	for _, t := range s {
-		if t, ok := t.(Table); ok {
+		if t, ok := t.(mx.Table); ok {
 			tables = append(tables, t)
 			break
 		}
@@ -28,9 +30,9 @@ func (v *DB) GetOrm(s ...interface{}) *Orm {
 	}
 
 	if len(tables) > 0 {
-		return &Orm{tables: tables, db: v}
+		return &Orm{table: tables, mix: make(mx.Mixs, 0), db: v}
 	} else {
-		return &Orm{db: v}
+		return &Orm{table: make(mx.Tables, 0), mix: make(mx.Mixs, 0), db: v}
 	}
 
 }
@@ -55,12 +57,8 @@ func (v *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
 	return v
 }
 
-func (v *DB) NewTable(name string, as ...string) *table {
-	t := &table{
-		db:      v,
-		Name:    name,
-		RawName: v.prefix + name,
-	}
+func (v *DB) NewTable(name string, as ...string) *table.Table {
+	t := table.NewTable(name, v.prefix, v.suffix)
 	if len(as) > 0 {
 		t.As = as[0]
 	}

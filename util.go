@@ -9,14 +9,13 @@ import (
 )
 
 var (
-	NOT_PTR           = errors.New("not pass a pointer")
-	NOT_SLI           = errors.New("not pass a slice")
-	NOT_STRU          = errors.New("not pass a struct")
-	NOT_STRU_IN_SLICE = errors.New("not pass a struct in slice")
-	NIL_PTR           = errors.New("pass a nil pointer")
-	ODD_PARAM         = errors.New("Odd number of parameters")
-	NO_DB_TAG         = errors.New("no db tag")
-	NO_ROWS           = sql.ErrNoRows
+	ErrNotPointer        = errors.New("not pass a pointer")
+	ErrNotSlice          = errors.New("not pass a slice")
+	ErrNotStruct         = errors.New("not pass a struct")
+	ErrNotStructInSlice  = errors.New("not pass a struct in slice")
+	ErrNilPointer        = errors.New("pass a nil pointer")
+	ErrOddNumberOfParams = errors.New("odd number of parameters")
+	ErrNoRows            = sql.ErrNoRows
 )
 
 type column struct {
@@ -33,7 +32,7 @@ func scanSlice(dest interface{}, rows *sql.Rows) error {
 	base, isPtr := getSliceBase(value)
 
 	if base.Kind() != reflect.Struct {
-		return NOT_STRU_IN_SLICE
+		return ErrNotStructInSlice
 	}
 
 	columns, err := rows.Columns()
@@ -62,13 +61,13 @@ func scanOne(dest interface{}, rows *sql.Rows) error {
 	value := reflect.ValueOf(dest)
 
 	if value.Kind() != reflect.Ptr {
-		return NOT_PTR
+		return ErrNotPointer
 	}
 
 	value = stringify.GetReflectValue(value)
 
 	if value.Kind() != reflect.Struct {
-		return NOT_STRU
+		return ErrNotStruct
 	}
 
 	columns, err := rows.Columns()
@@ -77,7 +76,7 @@ func scanOne(dest interface{}, rows *sql.Rows) error {
 	}
 
 	if !rows.Next() {
-		return NO_ROWS
+		return ErrNoRows
 	}
 	rows.Scan(generateScanData(value, columns)...)
 	return nil
@@ -115,17 +114,17 @@ func getSlice(dest interface{}) (reflect.Value, error) {
 	value := reflect.ValueOf(dest)
 
 	if value.Kind() != reflect.Ptr {
-		return reflect.Value{}, NOT_PTR
+		return reflect.Value{}, ErrNotPointer
 	}
 
 	value = stringify.GetReflectValue(value)
 
 	if value.IsNil() {
-		return reflect.Value{}, NIL_PTR
+		return reflect.Value{}, ErrNilPointer
 	}
 
 	if value.Kind() != reflect.Slice {
-		return reflect.Value{}, NOT_SLI
+		return reflect.Value{}, ErrNotSlice
 	}
 
 	return value, nil
@@ -201,7 +200,7 @@ func removeRep(s []string) []string {
 func sliceToMap(s []interface{}) (map[string]interface{}, error) {
 	p := map[string]interface{}{}
 	if len(s)%2 == 1 {
-		return p, ODD_PARAM
+		return p, ErrOddNumberOfParams
 	}
 	for k := range s {
 		if k%2 == 1 {

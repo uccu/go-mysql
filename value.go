@@ -2,23 +2,19 @@ package mysql
 
 import "strings"
 
-type value interface {
-	GetQuery() string
-}
-
-type MutiValue struct {
+type mutiValue struct {
 	q string
 	f []value
 }
 
-func (f *MutiValue) GetQuery() string {
+func (f *mutiValue) GetQuery() string {
 	query := f.q
 	for _, f := range f.f {
-		query = strings.Replace(query, "%t", f.GetQuery(), 1)
+		query = strings.Replace(query, "?", f.GetQuery(), 1)
 	}
 	return query
 }
 
-func NewMutiValue(query string, v ...value) *MutiValue {
-	return &MutiValue{query, v}
+func MutiValue(query string, v ...value) *mutiValue {
+	return &mutiValue{query, v}
 }

@@ -105,7 +105,7 @@ func (v *Orm) Delete() (int64, error) {
 }
 
 // 获取单个字段的值
-func (v *Orm) GetField(name string) error {
+func (v *Orm) GetField(name interface{}) error {
 	v.Field(name)
 	sql := v.transformSelectSql()
 	r, _ := regexp.Compile(`(?i)(LIMIT +\d+ *)$`)
@@ -174,34 +174,30 @@ func (v *Orm) GetFields(name string) error {
 	return nil
 }
 
-func (v *Orm) GetFieldString(name string) string {
-	var data *string
-	v.Dest(&data).GetField(name)
-	if data == nil {
-		return ""
-	}
-	return *data
+func (v *Orm) GetFieldString(f interface{}) string {
+	var data string
+	v.Dest(&data).GetField(f)
+	return data
 }
 
-func (v *Orm) GetFieldInt(name string) int64 {
-	var data *int64
-	v.Dest(&data).GetField(name)
-	if data == nil {
-		return 0
-	}
-	return *data
+func (v *Orm) GetFieldInt(f interface{}) int64 {
+	var data int64
+	v.Dest(&data).GetField(f)
+	return data
 }
 
-func (v *Orm) Count(val ...string) int64 {
-	field := "COUNT(1)"
-	if len(val) > 0 {
-		field = "COUNT(" + val[0] + ")"
+func (v *Orm) Count(f ...interface{}) int64 {
+	if len(f) > 0 {
+		k := v.transformField(f[0])
+		if k != nil {
+			return v.GetFieldInt(MutiField("COUNT(?)", k))
+		}
 	}
-	return v.RawFields(true).GetFieldInt(field)
+	return v.GetFieldInt(Raw("COUNT(1)"))
 }
 
 func (v *Orm) Exist() bool {
-	return v.RawFields(true).GetFieldInt("1") != 0
+	return v.GetFieldInt(Raw("1")) != 0
 }
 
 func (v *Orm) GetFieldsString(name string) []string {

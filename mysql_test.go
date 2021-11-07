@@ -2,17 +2,19 @@ package mysql_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"reflect"
 	"testing"
 	"time"
 
 	. "github.com/uccu/go-mysql"
+	"github.com/uccu/go-mysql/field"
 	"github.com/uccu/go-stringify"
 )
 
 func getPool() (*DB, error) {
-	dbpool, err := Open("mysql", "billiards:HkhD3wyYxKM2JLh5@tcp(60.205.184.251:3306)/billiards?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
+	dbpool, err := Open("mysql", "billiards:WzRm5AzWBaZHxPaM@tcp(60.205.184.251:3306)/billiards?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +26,13 @@ func getPool() (*DB, error) {
 		return nil, err
 	}
 
+	dbpool.WithErrHandler(func(e error) {
+		log.Println(fmt.Sprintln(e))
+	})
+	dbpool.WithAfterQueryHandler(func(o *Orm) {
+		log.Println("sql: ", o.Sql, o.GetArgs())
+	})
+
 	return dbpool.WithPrefix("b_"), nil
 }
 
@@ -34,7 +43,7 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 	}
 
-	count := dbpool.GetOrm("users").Count()
+	count := dbpool.GetOrm("user").Count(field.NewMutiField("?", field.NewField("id")))
 	log.Println("TestCount", count)
 
 }
@@ -47,7 +56,7 @@ func TestGetFields(t *testing.T) {
 	}
 
 	e := []*string{}
-	dbpool.GetOrm("users").Query("WHERE id>?", 45175).Dest(&e).GetFields("create_time")
+	dbpool.GetOrm("user").Query("WHERE id>?", 45175).Dest(&e).GetFields("create_at")
 	b, _ := json.Marshal(e)
 	log.Println("TestGetFields", string(b))
 
@@ -62,11 +71,11 @@ func TestFields(t *testing.T) {
 
 	type User struct {
 		Id int64  `db:"id" json:"id"`
-		W  string `db:"user_nicename"`
+		W  string `db:"name"`
 	}
 
 	e := User{}
-	err = dbpool.GetOrm("users").Field("id").Fields([]string{"id"}).Query("WHERE id>?", 45175).Dest(&e).FetchOne()
+	err = dbpool.GetOrm("user").Field("id").Query("WHERE id>?", 2).Dest(&e).FetchOne()
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +90,7 @@ func TestGetFieldString(t *testing.T) {
 		t.Error(err)
 	}
 
-	data := dbpool.GetOrm("users").Query("WHERE id=?", 45175).GetFieldString("user_nicename")
+	data := dbpool.GetOrm("user").Query("WHERE id=?", 45175).GetFieldString("name")
 	log.Println("TestGetFieldString", data)
 }
 
