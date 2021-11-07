@@ -196,16 +196,3 @@ func removeRep(s []string) []string {
 	}
 	return r
 }
-
-func sliceToMap(s []interface{}) (map[string]interface{}, error) {
-	p := map[string]interface{}{}
-	if len(s)%2 == 1 {
-		return p, ErrOddNumberOfParams
-	}
-	for k := range s {
-		if k%2 == 1 {
-			p[stringify.ToString(s[k-1])] = s[k]
-		}
-	}
-	return p, nil
-}

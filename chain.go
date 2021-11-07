@@ -50,7 +50,7 @@ func (v *Orm) whereStru(s interface{}) *Orm {
 func (v *Orm) Where(s ...interface{}) *Orm {
 
 	if len(s) == 1 {
-		rv := stringify.GetReflectValue(s)
+		rv := stringify.GetReflectValue(s[0])
 		if rv.Kind() == reflect.Struct {
 			return v.whereStru(s[0])
 		} else if rv.Kind() == reflect.Map {
@@ -111,7 +111,7 @@ func (v *Orm) setStru(s interface{}) *Orm {
 func (v *Orm) Set(s ...interface{}) *Orm {
 
 	if len(s) == 1 {
-		rv := stringify.GetReflectValue(s)
+		rv := stringify.GetReflectValue(s[0])
 		if rv.Kind() == reflect.Struct {
 			return v.setStru(s[0])
 		} else if rv.Kind() == reflect.Map {

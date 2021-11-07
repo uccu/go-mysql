@@ -57,10 +57,10 @@ func (v *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
 	return v
 }
 
-func (v *DB) NewTable(name string, as ...string) *table.Table {
+func (v *DB) NewTable(name string, alias ...string) *table.Table {
 	t := table.NewTable(name, v.prefix, v.suffix)
-	if len(as) > 0 {
-		t.As = as[0]
+	if len(alias) > 0 {
+		t.Alias = alias[0]
 	}
 	return t
 }

@@ -11,16 +11,23 @@ type MutiField struct {
 	f mx.Fields
 }
 
-func (f *MutiField) GetQuery() string {
-	query := f.q
-	for _, f := range f.f {
-		query = strings.Replace(query, "?", f.GetQuery(), 1)
+func (t *MutiField) With(w mx.With) mx.Field {
+	for _, f := range t.f {
+		f.With(w)
+	}
+	return t
+}
+
+func (m *MutiField) GetQuery() string {
+	query := m.q
+	for _, f := range m.f {
+		query = strings.Replace(query, "%t", f.GetQuery(), 1)
 	}
 	return query
 }
 
 func NewMutiField(q string, f ...mx.Field) *MutiField {
-	return &MutiField{q, f}
+	return &MutiField{q: q, f: f}
 }
 
 func (f *MutiField) GetArgs() []interface{} {

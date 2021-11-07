@@ -4,7 +4,7 @@ import "github.com/uccu/go-stringify"
 
 type Field interface {
 	Query
-	With(With)
+	With(With) Field
 }
 
 type Fields []Field
@@ -16,7 +16,7 @@ func (f Fields) GetQuery() string {
 	}
 	list := []string{}
 	for _, f := range f {
-		list = append(list, "("+f.GetQuery()+")")
+		list = append(list, f.GetQuery())
 	}
 
 	return stringify.ToString(list, ", ")

@@ -10,7 +10,8 @@ func (f *RawField) GetQuery() string {
 	return f.q
 }
 
-func (t *RawField) With(w mx.With) {
+func (t *RawField) With(w mx.With) mx.Field {
+	return t
 }
 
 func NewRawField(q string) *RawField {

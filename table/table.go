@@ -14,7 +14,7 @@ type joins []*join
 
 type Table struct {
 	Name    string
-	As      string
+	Alias   string
 	RawName string
 	suffix  func(interface{}) string
 	join    joins
@@ -27,17 +27,17 @@ func (t *Table) With(w mx.With) {
 }
 
 func (t *Table) GetName() string {
-	as := t.As
-	if t.As == "" {
-		as = t.RawName
+	alias := t.Alias
+	if t.Alias == "" {
+		alias = t.RawName
 	}
 	if t.with.IsWithBackquote() {
-		as = "`" + as + "`"
+		alias = "`" + alias + "`"
 	}
 	if !t.with.IsQuery() {
 		t.with.Reset()
 	}
-	return as
+	return alias
 }
 func (t *Table) Suffix(s interface{}) {
 	t.RawName += t.suffix(s)
@@ -52,14 +52,14 @@ func (t *Table) GetQuery() string {
 		query = "`" + query + "`"
 	}
 
-	if t.with.IsWithAs() && t.As != "" {
+	if t.with.IsWithAlias() && t.Alias != "" {
 		query += " " + t.GetName()
 	}
 
 	if t.join != nil {
 		for _, j := range t.join {
-			if t.with.IsWithAs() {
-				j.table.With(mx.WithAs)
+			if t.with.IsWithAlias() {
+				j.table.With(mx.WithAlias)
 			}
 			if t.with.IsWithBackquote() {
 				j.table.With(mx.WithBackquote)

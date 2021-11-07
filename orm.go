@@ -25,7 +25,7 @@ type Orm struct {
 }
 
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
-	v.addMix(mix.NewMix(query, args...))
+	v.addMix(mix.NewMix(" "+query, args...))
 	return v
 }
 
@@ -38,17 +38,17 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 	if len(typs) > 0 && v.mixType != typs[0] {
 		typ := typs[0]
 		if typ == "where" {
-			v.mix = append(v.mix, mix.NewMix(" WHERE "))
+			v.mix = append(v.mix, mix.NewMix("WHERE"))
 		} else if typ == "set" {
-			v.mix = append(v.mix, mix.NewMix(" SET "))
+			v.mix = append(v.mix, mix.NewMix("SET"))
 		} else if typ == "group" {
-			v.mix = append(v.mix, mix.NewMix(" GROUP BY "))
+			v.mix = append(v.mix, mix.NewMix("GROUP BY"))
 		} else if typ == "limit" {
-			v.mix = append(v.mix, mix.NewMix(" LIMIT "))
+			v.mix = append(v.mix, mix.NewMix("LIMIT"))
 		} else if typ == "order" {
-			v.mix = append(v.mix, mix.NewMix(" ORDER BY "))
+			v.mix = append(v.mix, mix.NewMix("ORDER BY"))
 		} else if typ == "having" {
-			v.mix = append(v.mix, mix.NewMix(" HAVING "))
+			v.mix = append(v.mix, mix.NewMix("HAVING"))
 		}
 		v.mixType = typ
 	}
@@ -127,19 +127,19 @@ func (v *Orm) transformFields() string {
 }
 
 func (v *Orm) transformSelectSql() string {
-	return "SELECT " + v.transformFields() + " FROM " + v.table.GetQuery() + " " + v.transformQuery()
+	return "SELECT " + v.transformFields() + " FROM " + v.transformTable() + " " + v.transformQuery()
 }
 
 func (v *Orm) transformUpdateSql() string {
-	return "UPDATE " + v.table.GetQuery() + v.transformQuery()
+	return "UPDATE " + v.transformTable() + " " + v.transformQuery()
 }
 
 func (v *Orm) transformDeleteSql() string {
-	return "DELETE " + v.table.GetQuery() + v.transformQuery()
+	return "DELETE " + v.transformTable() + " " + v.transformQuery()
 }
 
 func (v *Orm) transformInsertSql() string {
-	return "INSERT INTO " + v.table.GetQuery() + v.transformQuery()
+	return "INSERT INTO " + v.transformTable() + " " + v.transformQuery()
 }
 
 func (v *Orm) Err() error {
@@ -154,10 +154,25 @@ func (v *Orm) setErr(e error) *Orm {
 	return v
 }
 
+func (v *Orm) transformTable() string {
+	if len(v.table) > 1 {
+		v.table.With(mx.WithTable)
+	}
+	v.table.With(mx.WithBackquote)
+	return v.table.GetQuery()
+}
 func (v *Orm) transformQuery() string {
+	if len(v.table) > 1 {
+		v.mix.With(mx.WithTable)
+	}
+	v.mix.With(mx.WithBackquote)
 	return v.mix.GetQuery()
 }
 
 func (v *Orm) GetArgs() []interface{} {
+	if len(v.table) > 1 {
+		v.mix.With(mx.WithTable)
+	}
+	v.mix.With(mx.WithBackquote)
 	return v.mix.GetArgs()
 }

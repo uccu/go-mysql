@@ -7,7 +7,7 @@ import (
 type Field struct {
 	Table string
 	Name  string
-	As    string
+	Alias string
 
 	with mx.WithTrait
 }
@@ -16,12 +16,13 @@ func NewField(name string) *Field {
 	return &Field{Name: name}
 }
 
-func (t *Field) With(w mx.With) {
+func (t *Field) With(w mx.With) mx.Field {
 	t.with.With(w)
+	return t
 }
 
 func (f *Field) SetAs(n string) {
-	f.As = n
+	f.Alias = n
 }
 
 func (f *Field) SetTable(n string) {
@@ -29,17 +30,17 @@ func (f *Field) SetTable(n string) {
 }
 
 func (t *Field) GetName() string {
-	as := t.As
-	if t.As == "" {
-		as = t.Name
+	alias := t.Alias
+	if t.Alias == "" {
+		alias = t.Name
 	}
 	if t.with.IsWithBackquote() {
-		as = "`" + as + "`"
+		alias = "`" + alias + "`"
 	}
 	if !t.with.IsQuery() {
 		t.with.Reset()
 	}
-	return as
+	return alias
 }
 
 func (f *Field) GetQuery() string {
@@ -51,7 +52,7 @@ func (f *Field) GetQuery() string {
 		query = "`" + query + "`"
 	}
 
-	if f.with.IsWithAs() && f.As != "" {
+	if f.with.IsWithAlias() && f.Alias != "" {
 		query += " " + f.GetName()
 	}
 

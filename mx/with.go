@@ -3,8 +3,7 @@ package mx
 type With int
 
 const (
-	WithNone With = iota
-	WithAs
+	WithAlias With = 1 << iota
 	WithTable
 	WithBackquote
 )
@@ -14,22 +13,12 @@ type with interface {
 }
 
 type WithTrait struct {
-	withAs        bool
-	withBackquote bool
-	withTable     bool
-	query         bool
+	Status With
+	query  bool
 }
 
 func (wt *WithTrait) With(w With) {
-	if w == WithAs {
-		wt.withAs = true
-	}
-	if w == WithBackquote {
-		wt.withBackquote = true
-	}
-	if w == WithTable {
-		wt.withTable = true
-	}
+	wt.Status = w
 }
 
 func (wt *WithTrait) SetQuery() {
@@ -37,23 +26,22 @@ func (wt *WithTrait) SetQuery() {
 }
 
 func (wt *WithTrait) Reset() {
-	wt.withAs = false
-	wt.withBackquote = false
+	wt.Status = 0
 	wt.query = false
-	wt.withTable = false
 }
 
-func (wt *WithTrait) IsWithAs() bool {
-	return wt.withAs
+func (wt *WithTrait) IsWithAlias() bool {
+	return wt.Status&WithAlias > 0
 }
 
 func (wt *WithTrait) IsWithBackquote() bool {
-	return wt.withBackquote
+	return wt.Status&WithBackquote > 0
 }
 
 func (wt *WithTrait) IsWithTable() bool {
-	return wt.withTable
+	return wt.Status&WithTable > 0
 }
+
 func (wt *WithTrait) IsQuery() bool {
 	return wt.query
 }

@@ -10,13 +10,22 @@ type Mix struct {
 	q string
 	m mx.Mixs
 	a []interface{}
+
+	with mx.WithTrait
+}
+
+func (t *Mix) With(w mx.With) mx.Mix {
+	t.with.With(w)
+	return t
 }
 
 func (m *Mix) GetQuery() string {
+	m.with.SetQuery()
 	query := m.q
-	for _, m := range m.m {
-		query = strings.Replace(query, "%t", m.GetQuery(), 1)
+	for _, v := range m.m {
+		query = strings.Replace(query, "%t", v.With(m.with.Status).GetQuery(), 1)
 	}
+	m.with.Reset()
 	return query
 }
 

@@ -43,7 +43,7 @@ func TestCount(t *testing.T) {
 		t.Error(err)
 	}
 
-	count := dbpool.GetOrm("user").Count(field.NewMutiField("?", field.NewField("id")))
+	count := dbpool.GetOrm("user").Count(field.NewMutiField("%t", field.NewField("id")))
 	log.Println("TestCount", count)
 
 }
@@ -90,7 +90,7 @@ func TestGetFieldString(t *testing.T) {
 		t.Error(err)
 	}
 
-	data := dbpool.GetOrm("user").Query("WHERE id=?", 45175).GetFieldString("name")
+	data := dbpool.GetOrm("user").Query("WHERE id=?", 57).GetFieldString("name")
 	log.Println("TestGetFieldString", data)
 }
 
@@ -100,7 +100,7 @@ func TestGetFieldInt(t *testing.T) {
 		t.Error(err)
 	}
 
-	data := dbpool.GetOrm("users").Query("WHERE id=?", 45175).GetFieldString("coin")
+	data := dbpool.GetOrm("user").Query("WHERE id=?", 57).GetFieldString("name")
 	log.Println("TestGetFieldInt", data)
 }
 
@@ -110,7 +110,7 @@ func TestUpdate(t *testing.T) {
 		t.Error(err)
 	}
 
-	data, err := dbpool.GetOrm("users").Query("SET coin=coin+1 WHERE id=?", 45175).Update()
+	data, err := dbpool.GetOrm("user").Query("SET coin=coin+1 WHERE id=?", 45175).Update()
 	if err != nil {
 		t.Error(err)
 	}
@@ -280,7 +280,7 @@ func TestPointer(t *testing.T) {
 	user.Id = 57
 	user.Name = "dde"
 
-	dbpool.GetOrm("user").Dest(user).Where(user).Set(user).Update()
+	dbpool.GetOrm("user").Dest(user).Set(user).Where(user).Update()
 
 	if user.Id != 57 {
 		t.Error("id not right")
@@ -296,7 +296,7 @@ func TestNilPointer(t *testing.T) {
 
 	orm := dbpool.GetOrm("order")
 
-	total := orm.GetFieldString("SUM(price_total)")
+	total := orm.GetFieldString(field.NewMutiField("SUM(%t)", field.NewField("price_total")))
 
 	log.Println(orm.Err())
 	log.Println(total)
