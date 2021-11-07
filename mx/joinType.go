@@ -19,5 +19,4 @@ var joinTypeName = map[JoinType]string{
 	INNER_JOIN: "inner join",
 	LEFT_JOIN:  "left join",
 	RIGHT_JOIN: "right join",
-	OUTER_JOIN: "outer join",
 }

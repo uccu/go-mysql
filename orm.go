@@ -17,15 +17,9 @@ type Orm struct {
 	fields  mx.Fields
 	mixType string
 
-	query          string
-	args           []interface{}
-	dest           interface{}
-	err            error
-	rawFields      bool
-	wk             []string
-	wv             []interface{}
-	sk             []string
-	sv             []interface{}
+	dest interface{}
+	err  error
+
 	StartQueryTime time.Time
 	Sql            string
 }
@@ -53,6 +47,8 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 			v.mix = append(v.mix, mix.NewMix(" LIMIT "))
 		} else if typ == "order" {
 			v.mix = append(v.mix, mix.NewMix(" ORDER BY "))
+		} else if typ == "having" {
+			v.mix = append(v.mix, mix.NewMix(" HAVING "))
 		}
 		v.mixType = typ
 	}
@@ -63,16 +59,6 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 
 func (v *Orm) Dest(dest interface{}) *Orm {
 	v.dest = dest
-	return v
-}
-
-func (v *Orm) Field(fields ...interface{}) *Orm {
-	for _, f := range fields {
-		k := field.GetField(f)
-		if k != nil {
-			v.addField(k)
-		}
-	}
 	return v
 }
 
@@ -144,6 +130,18 @@ func (v *Orm) transformSelectSql() string {
 	return "SELECT " + v.transformFields() + " FROM " + v.table.GetQuery() + " " + v.transformQuery()
 }
 
+func (v *Orm) transformUpdateSql() string {
+	return "UPDATE " + v.table.GetQuery() + v.transformQuery()
+}
+
+func (v *Orm) transformDeleteSql() string {
+	return "DELETE " + v.table.GetQuery() + v.transformQuery()
+}
+
+func (v *Orm) transformInsertSql() string {
+	return "INSERT INTO " + v.table.GetQuery() + v.transformQuery()
+}
+
 func (v *Orm) Err() error {
 	return v.err
 }
@@ -156,131 +154,10 @@ func (v *Orm) setErr(e error) *Orm {
 	return v
 }
 
-func (v *Orm) WhereStru(s interface{}) *Orm {
-	rv := stringify.GetReflectValue(s)
-
-	p := mx.ConditionMix{}
-
-	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
-		db := s.Tag.Get("db")
-		dbset := s.Tag.Get("dbwhere")
-		if dbset != "" {
-			db = dbset
-		}
-		if db == "-" {
-			return true
-		}
-		if db == "" {
-			return false
-		}
-		if v.CanInterface() {
-			p = append(p, mix.NewMix("%t=?", field.NewField(db), v.Interface()))
-
-			return true
-		}
-		return false
-	})
-
-	return v.addMix(p, "where")
-}
-
-func (v *Orm) WhereMap(s ...interface{}) *Orm {
-
-	if len(s)%2 == 1 {
-		v.setErr(ErrOddNumberOfParams)
-		return v
-	}
-
-	if v.wk == nil {
-		v.wk = make([]string, 0)
-	}
-
-	if v.wv == nil {
-		v.wv = make([]interface{}, 0)
-	}
-
-	for k, vs := range s {
-		if k%2 == 0 {
-			v.wk = append(v.wk, stringify.ToString(vs))
-		} else {
-			v.wv = append(v.wv, vs)
-		}
-	}
-	return v
-}
-
-func (v *Orm) Where(data map[string]interface{}) *Orm {
-
-	if v.wk == nil {
-		v.wk = make([]string, 0)
-	}
-
-	if v.wv == nil {
-		v.wv = make([]interface{}, 0)
-	}
-
-	for k, vs := range data {
-		v.wk = append(v.wk, k)
-		v.wv = append(v.wv, vs)
-	}
-
-	return v
-}
-
-func (v *Orm) SetStru(s interface{}) *Orm {
-	p := map[string]interface{}{}
-	rv := stringify.GetReflectValue(s)
-	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
-		db := s.Tag.Get("db")
-		dbset := s.Tag.Get("dbset")
-		if dbset != "" {
-			db = dbset
-		}
-		if db == "-" {
-			return true
-		}
-		if db == "" {
-			return false
-		}
-		if v.CanInterface() {
-			p[db] = v.Interface()
-			return true
-		}
-		return false
-	})
-	return v.Set(p)
-}
-
-func (v *Orm) Set(data map[string]interface{}) *Orm {
-
-	if v.sk == nil {
-		v.sk = make([]string, 0)
-	}
-
-	if v.sv == nil {
-		v.sv = make([]interface{}, 0)
-	}
-
-	for k, vs := range data {
-		v.sk = append(v.sk, k)
-		v.sv = append(v.sv, vs)
-	}
-
-	return v
-}
-
-func (v *Orm) SetMap(s ...interface{}) *Orm {
-	p, err := sliceToMap(s)
-	if err != nil {
-		v.setErr(err)
-	}
-	return v.Set(p)
-}
-
 func (v *Orm) transformQuery() string {
 	return v.mix.GetQuery()
 }
 
 func (v *Orm) GetArgs() []interface{} {
-	return v.args
+	return v.mix.GetArgs()
 }

@@ -14,7 +14,7 @@ import (
 )
 
 func getPool() (*DB, error) {
-	dbpool, err := Open("mysql", "billiards:WzRm5AzWBaZHxPaM@tcp(60.205.184.251:3306)/billiards?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
+	dbpool, err := Open("mysql", "")
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func TestWhereMap(t *testing.T) {
 
 	user := &User{}
 
-	err = dbpool.GetOrm("user").Dest(user).WhereMap("id", 2).FetchOne()
+	err = dbpool.GetOrm("user").Dest(user).Where("id", 2).FetchOne()
 	if err != nil {
 		t.Error(err)
 	}
@@ -280,7 +280,7 @@ func TestPointer(t *testing.T) {
 	user.Id = 57
 	user.Name = "dde"
 
-	dbpool.GetOrm("user").Dest(user).WhereStru(user).SetStru(user).Update()
+	dbpool.GetOrm("user").Dest(user).Where(user).Set(user).Update()
 
 	if user.Id != 57 {
 		t.Error("id not right")
@@ -294,7 +294,7 @@ func TestNilPointer(t *testing.T) {
 		t.Error(err)
 	}
 
-	orm := dbpool.GetOrm("order").RawFields(true)
+	orm := dbpool.GetOrm("order")
 
 	total := orm.GetFieldString("SUM(price_total)")
 
