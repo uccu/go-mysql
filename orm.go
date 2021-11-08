@@ -1,51 +1,70 @@
 package mysql
 
 import (
-	"reflect"
-	"strings"
 	"time"
 
-	"github.com/uccu/go-stringify"
+	"github.com/uccu/go-mysql/mx"
+	"github.com/uccu/go-mysql/table"
 )
 
 type Orm struct {
 	db             *DB
-	table          string
-	rawQuery       bool
-	query          string
-	args           []interface{}
+	table          mx.Tables
+	mix            mx.Mixs
+	fields         mx.Fields
+	mixType        string
 	dest           interface{}
-	fields         []string
 	err            error
-	rawFields      bool
-	wk             []string
-	wv             []interface{}
-	sk             []string
-	sv             []interface{}
-	subTable       bool
-	subValue       int64
 	StartQueryTime time.Time
 	Sql            string
-}
-
-func (v *Orm) SubValue(s int64) *Orm {
-	v.subTable = true
-	v.subValue = s
-	return v
+	b              bool // true 不执行sql
+	orms           []*Orm
+	unionAll       bool
 }
 
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
-	v.query = query
-	v.args = args
+
+	v.addMix(Mix(" "+query, args...))
 	return v
 }
 
-func (v *Orm) RawQuery(b ...bool) *Orm {
-	if len(b) > 0 {
-		v.rawQuery = b[0]
-	} else {
-		v.rawQuery = true
+func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
+
+	if v.mix == nil {
+		v.mix = make(mx.Mixs, 0)
 	}
+
+	if len(typs) > 0 {
+		typ := typs[0]
+
+		if typ == "group" {
+			v.mix = append(v.mix, Raw(" GROUP BY "))
+		} else if typ == "limit" {
+			v.mix = append(v.mix, Raw(" LIMIT "))
+		} else if typ == "order" {
+			v.mix = append(v.mix, Raw(" ORDER BY "))
+		} else if v.mixType == typ {
+			switch typ {
+			case "where", "having":
+				v.mix = append(v.mix, Raw(" AND "))
+			case "set":
+				v.mix = append(v.mix, Raw(", "))
+			}
+		} else {
+			switch typ {
+			case "where":
+				v.mix = append(v.mix, Raw(" WHERE "))
+			case "having":
+				v.mix = append(v.mix, Raw(" HAVING "))
+			case "set":
+				v.mix = append(v.mix, Raw(" SET "))
+			}
+		}
+
+		v.mixType = typ
+	}
+
+	v.mix = append(v.mix, m)
 	return v
 }
 
@@ -54,70 +73,52 @@ func (v *Orm) Dest(dest interface{}) *Orm {
 	return v
 }
 
-func (v *Orm) Fields(fields []string) *Orm {
-	v.fields = fields
+func (v *Orm) addField(field mx.Field) *Orm {
+	if v.fields == nil {
+		v.fields = make(mx.Fields, 0)
+	}
+	v.fields = append(v.fields, field)
 	return v
 }
 
-func (v *Orm) Field(fields ...string) *Orm {
-	v.fields = fields
+func (v *Orm) addTable(table mx.Table) *Orm {
+	if v.table == nil {
+		v.table = make(mx.Tables, 0)
+	}
+	v.table = append(v.table, table)
 	return v
 }
 
-func (v *Orm) transformFields() string {
-	if len(v.fields) == 0 {
-		if v.dest != nil {
-			val := stringify.GetReflectValue(v.dest).Type()
-			if val.Kind() == reflect.Slice {
-				val = val.Elem()
-				for val.Kind() == reflect.Ptr {
-					val = val.Elem()
-				}
-			}
-
-			if val.Kind() == reflect.Struct {
-				fields := []string{}
-				loopStructType(val, func(s reflect.StructField) bool {
-					name := s.Tag.Get("db")
-					if name != "" {
-						if name != "-" {
-							fields = append(fields, name)
-						}
-						return true
-					}
-					return false
-				})
-				fields = removeRep(fields)
-				if len(fields) == 0 {
-					v.setErr(NO_DB_TAG)
-					return "1"
-				}
-
-				return v.Fields(removeRep(fields)).transformFields()
-			}
-		}
-		return "*"
+func (v *Orm) addJoin(typ mx.JoinType, s interface{}, c ...interface{}) *Orm {
+	if len(v.table) == 0 {
+		return v
 	}
-	if v.rawFields {
-		return strings.Join(v.fields, ",")
+
+	var container mx.Container
+	if c, ok := s.(mx.Container); ok {
+		container = c
+	} else if s, ok := s.(string); ok {
+		k := transformToKey(s)
+		container = table.NewTable(k.Name, v.db.prefix+k.Name).SetAlias(k.Alias).SetDBName(k.Parent)
+	} else {
+		return v.setErr(ErrNoContainer)
 	}
-	return "`" + strings.Join(v.fields, "`,`") + "`"
+
+	mixs, err := transformToMixs("dbwhere", c...)
+	if err != nil {
+		return v.setErr(err)
+	}
+
+	v.table[0].Join(container, typ, mx.ConditionMix(mixs))
+
+	return v
 }
 
-func (v *Orm) transformTableName() string {
-	table := v.table
-	if v.subTable {
-		table = v.db.subTable(v.table, v.subValue)
+func (v *Orm) addUnion(o *Orm) *Orm {
+	if v.orms == nil {
+		v.orms = make([]*Orm, 0)
 	}
-	return "`" + v.db.prefix + table + "`"
-}
-
-func (v *Orm) transformSelectSql() string {
-	return "SELECT " + v.transformFields() + " FROM " + v.transformTableName() + v.transformQuery()
-}
-
-func (v *Orm) RawFields(r bool) *Orm {
-	v.rawFields = r
+	v.orms = append(v.orms, o)
 	return v
 }
 
@@ -133,145 +134,6 @@ func (v *Orm) setErr(e error) *Orm {
 	return v
 }
 
-func (v *Orm) WhereStru(s interface{}) *Orm {
-	p := map[string]interface{}{}
-	rv := stringify.GetReflectValue(s)
-	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
-		db := s.Tag.Get("db")
-		dbset := s.Tag.Get("dbwhere")
-		if dbset != "" {
-			db = dbset
-		}
-		if db == "-" {
-			return true
-		}
-		if db == "" {
-			return false
-		}
-		if v.CanInterface() {
-			p[db] = v.Interface()
-			return true
-		}
-		return false
-	})
-	return v.Where(p)
-}
-
-func (v *Orm) WhereMap(s ...interface{}) *Orm {
-
-	if len(s)%2 == 1 {
-		v.setErr(ODD_PARAM)
-		return v
-	}
-
-	if v.wk == nil {
-		v.wk = make([]string, 0)
-	}
-
-	if v.wv == nil {
-		v.wv = make([]interface{}, 0)
-	}
-
-	for k, vs := range s {
-		if k%2 == 0 {
-			v.wk = append(v.wk, stringify.ToString(vs))
-		} else {
-			v.wv = append(v.wv, vs)
-		}
-	}
-	return v
-}
-
-func (v *Orm) Where(data map[string]interface{}) *Orm {
-
-	if v.wk == nil {
-		v.wk = make([]string, 0)
-	}
-
-	if v.wv == nil {
-		v.wv = make([]interface{}, 0)
-	}
-
-	for k, vs := range data {
-		v.wk = append(v.wk, k)
-		v.wv = append(v.wv, vs)
-	}
-
-	return v
-}
-
-func (v *Orm) SetStru(s interface{}) *Orm {
-	p := map[string]interface{}{}
-	rv := stringify.GetReflectValue(s)
-	loopStruct(rv, func(v reflect.Value, s reflect.StructField) bool {
-		db := s.Tag.Get("db")
-		dbset := s.Tag.Get("dbset")
-		if dbset != "" {
-			db = dbset
-		}
-		if db == "-" {
-			return true
-		}
-		if db == "" {
-			return false
-		}
-		if v.CanInterface() {
-			p[db] = v.Interface()
-			return true
-		}
-		return false
-	})
-	return v.Set(p)
-}
-
-func (v *Orm) Set(data map[string]interface{}) *Orm {
-
-	if v.sk == nil {
-		v.sk = make([]string, 0)
-	}
-
-	if v.sv == nil {
-		v.sv = make([]interface{}, 0)
-	}
-
-	for k, vs := range data {
-		v.sk = append(v.sk, k)
-		v.sv = append(v.sv, vs)
-	}
-
-	return v
-}
-
-func (v *Orm) SetMap(s ...interface{}) *Orm {
-	p, err := sliceToMap(s)
-	if err != nil {
-		v.setErr(err)
-	}
-	return v.Set(p)
-}
-
-func (v *Orm) transformQuery() string {
-
-	where := ""
-	if len(v.wk) > 0 {
-		v.args = append(v.wv, v.args...)
-		where = " WHERE `" + strings.Join(v.wk, "`=? AND `") + "`=?"
-	}
-
-	set := ""
-	if len(v.sk) > 0 {
-		v.args = append(v.sv, v.args...)
-		set = " SET `" + strings.Join(v.sk, "`=?,`") + "`=?"
-	}
-
-	query := ""
-	if v.query != "" {
-		query = " " + v.query
-	}
-
-	return set + where + query
-}
-
 func (v *Orm) GetArgs() []interface{} {
-	return v.args
+	return v.mix.GetArgs()
 }

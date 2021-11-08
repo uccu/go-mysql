@@ -1,41 +1,45 @@
 package mysql
 
-import "database/sql"
+import (
+	"database/sql"
+
+	_ "github.com/go-sql-driver/mysql"
+)
 
 type DB struct {
 	*sql.DB
 	prefix            string
-	subTable          func(table string, n int64) string
+	suffix            func(interface{}) string
 	errHandler        func(error)
 	afterQueryHandler func(*Orm)
 }
 
-func (v *DB) GetOrm(name ...string) *Orm {
-	var table string
-	if len(name) > 0 {
-		table = name[0]
-	}
-	return &Orm{table: table, db: v}
+func (db *DB) Table(s ...interface{}) *Orm {
+	return db.Default().Table(s...)
 }
 
-func (v *DB) Prefix(p string) *DB {
-	v.prefix = p
-	return v
+func (db *DB) Default() *Orm {
+	return &Orm{db: db}
 }
 
-func (v *DB) ErrHandle(p func(error)) *DB {
-	v.errHandler = p
-	return v
+func (db *DB) WithPrefix(p string) *DB {
+	db.prefix = p
+	return db
 }
 
-func (v *DB) AfterQueryHandle(p func(*Orm)) *DB {
-	v.afterQueryHandler = p
-	return v
+func (db *DB) WithSuffix(p func(interface{}) string) *DB {
+	db.suffix = p
+	return db
 }
 
-func (v *DB) SubTable(p func(table string, n int64) string) *DB {
-	v.subTable = p
-	return v
+func (db *DB) WithErrHandler(p func(error)) *DB {
+	db.errHandler = p
+	return db
+}
+
+func (db *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
+	db.afterQueryHandler = p
+	return db
 }
 
 func Open(driverName, dataSourceName string) (*DB, error) {
