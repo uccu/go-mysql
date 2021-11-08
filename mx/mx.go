@@ -11,9 +11,3 @@ type Args interface {
 type Value interface {
 	Query
 }
-
-type Container interface {
-	Query
-	Args
-	with
-}

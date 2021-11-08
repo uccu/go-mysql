@@ -3,6 +3,7 @@ package field
 import (
 	"strings"
 
+	"github.com/uccu/go-mysql/mix"
 	"github.com/uccu/go-mysql/mx"
 )
 
@@ -32,4 +33,8 @@ func NewMutiField(q string, f ...mx.Field) *MutiField {
 
 func (f *MutiField) GetArgs() []interface{} {
 	return nil
+}
+
+func (f *MutiField) ToMix() mx.Mix {
+	return &mix.Field{Field: f}
 }

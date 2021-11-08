@@ -8,17 +8,13 @@ const (
 	WithBackquote
 )
 
-type with interface {
-	With(With)
-}
-
 type WithTrait struct {
 	Status With
 	query  bool
 }
 
 func (wt *WithTrait) With(w With) {
-	wt.Status = w
+	wt.Status |= w
 }
 
 func (wt *WithTrait) SetQuery() {

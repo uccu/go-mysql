@@ -28,6 +28,22 @@ func (v *Orm) Select() error {
 		v.startQuery(v.transformQuery())
 	}
 
+	if len(v.orms) > 0 {
+		for _, o := range v.orms {
+			o.Select()
+			v.Sql += " UNION "
+			if o.unionAll {
+				v.Sql += "ALL "
+			}
+			o.Select()
+			v.Sql += "(" + o.Sql + ")"
+		}
+	}
+
+	if v.b {
+		return nil
+	}
+
 	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
@@ -49,10 +65,16 @@ func (v *Orm) Select() error {
 // 获取单条数据
 func (v *Orm) FetchOne() error {
 
+	v.Limit(1)
+
 	if len(v.table) > 0 {
 		v.startQuery(v.transformSelectSql())
 	} else {
 		v.startQuery(v.transformQuery())
+	}
+
+	if v.b {
+		return nil
 	}
 
 	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
@@ -82,6 +104,10 @@ func (v *Orm) Update() (int64, error) {
 		v.startQuery(v.transformQuery())
 	}
 
+	if v.b {
+		return 0, nil
+	}
+
 	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
@@ -100,6 +126,32 @@ func (v *Orm) Insert() (int64, error) {
 		v.startQuery(v.transformInsertSql())
 	} else {
 		v.startQuery(v.transformQuery())
+	}
+
+	if v.b {
+		return 0, nil
+	}
+
+	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
+	if err != nil {
+		v.setErr(err)
+		return 0, err
+	}
+	v.afterQuery()
+
+	return result.LastInsertId()
+}
+
+func (v *Orm) Replace() (int64, error) {
+
+	if len(v.table) > 0 {
+		v.startQuery(v.transformReplaceSql())
+	} else {
+		v.startQuery(v.transformQuery())
+	}
+
+	if v.b {
+		return 0, nil
 	}
 
 	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
@@ -121,6 +173,10 @@ func (v *Orm) Delete() (int64, error) {
 		v.startQuery(v.transformQuery())
 	}
 
+	if v.b {
+		return 0, nil
+	}
+
 	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
@@ -134,11 +190,16 @@ func (v *Orm) Delete() (int64, error) {
 func (v *Orm) GetField(name interface{}) error {
 
 	v.Field(name)
+	v.Limit(1)
 
 	if len(v.table) > 0 {
 		v.startQuery(v.transformSelectSql())
 	} else {
 		v.startQuery(v.transformQuery())
+	}
+
+	if v.b {
+		return nil
 	}
 
 	row := v.db.QueryRow(v.Sql, v.GetArgs()...)
@@ -166,6 +227,10 @@ func (v *Orm) GetFields(name string) error {
 		v.startQuery(v.transformSelectSql())
 	} else {
 		v.startQuery(v.transformQuery())
+	}
+
+	if v.b {
+		return nil
 	}
 
 	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
@@ -211,12 +276,11 @@ func (v *Orm) GetFieldInt(f interface{}) int64 {
 	return data
 }
 
-func (v *Orm) Count(f ...interface{}) int64 {
+func (v *Orm) Count(f ...string) int64 {
+
 	if len(f) > 0 {
-		k := field.GetField(f[0])
-		if k != nil {
-			return v.GetFieldInt(field.NewMutiField("COUNT(?)", k))
-		}
+		k := transformToKey(f[0])
+		return v.GetFieldInt(field.NewMutiField("COUNT(%t)", field.NewField(k.Name).SetAlias(k.Alias).SetTable(k.Parent)))
 	}
 	return v.GetFieldInt(field.NewRawField("COUNT(1)"))
 }

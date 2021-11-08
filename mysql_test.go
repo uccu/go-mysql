@@ -1,29 +1,31 @@
 package mysql_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	. "github.com/uccu/go-mysql"
-	"github.com/uccu/go-mysql/field"
-	"github.com/uccu/go-stringify"
 )
 
-func getPool() (*DB, error) {
+type user struct {
+	Id   int64  `db:"id" dbset:"-"`
+	Name string `db:"name" dbwhere:"-"`
+}
+
+func getPool() *DB {
 	dbpool, err := Open("mysql", "")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	dbpool.SetMaxOpenConns(1)
 	dbpool.SetMaxIdleConns(1)
 	dbpool.SetConnMaxLifetime(2 * time.Second)
 	err = dbpool.Ping()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	dbpool.WithErrHandler(func(e error) {
@@ -33,271 +35,171 @@ func getPool() (*DB, error) {
 		log.Println("sql: ", o.Sql, o.GetArgs())
 	})
 
-	return dbpool.WithPrefix("b_"), nil
+	return dbpool.WithPrefix("b_")
 }
 
 func TestCount(t *testing.T) {
+	dbpool := getPool()
+	var orm *Orm
 
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+	orm = dbpool.Table("user")
+	orm.Exec(false).Count("id")
+	assert.Equal(t, orm.Sql, "SELECT COUNT(`id`) FROM `b_user` LIMIT ?")
 
-	count := dbpool.GetOrm("user").Count(field.NewMutiField("%t", field.NewField("id")))
-	log.Println("TestCount", count)
-
+	orm = dbpool.Table("user")
+	orm.Exec(false).Count()
+	assert.Equal(t, orm.Sql, "SELECT COUNT(1) FROM `b_user` LIMIT ?")
 }
 
 func TestGetFields(t *testing.T) {
-
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
-
-	e := []*string{}
-	dbpool.GetOrm("user").Query("WHERE id>?", 45175).Dest(&e).GetFields("create_at")
-	b, _ := json.Marshal(e)
-	log.Println("TestGetFields", string(b))
-
+	dbpool := getPool()
+	orm := dbpool.Table("user")
+	orm.Exec(false).GetFields("a")
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user`")
 }
 
-func TestFields(t *testing.T) {
-
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
-
-	type User struct {
-		Id int64  `db:"id" json:"id"`
-		W  string `db:"name"`
-	}
-
-	e := User{}
-	err = dbpool.GetOrm("user").Field("id").Query("WHERE id>?", 2).Dest(&e).FetchOne()
-	if err != nil {
-		t.Error(err)
-	}
-	b, _ := json.Marshal(e)
-	log.Println("TestGetFields", string(b))
-
+func TestGetField(t *testing.T) {
+	dbpool := getPool()
+	orm := dbpool.Table("user")
+	orm.Exec(false).GetField("a")
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user` LIMIT ?")
 }
 
-func TestGetFieldString(t *testing.T) {
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+func TestField(t *testing.T) {
+	dbpool := getPool()
+	orm := dbpool.Table("user")
+	orm.Exec(false).Field("a", "w").FetchOne()
+	assert.Equal(t, orm.Sql, "SELECT `a`, `w` FROM `b_user` LIMIT ?")
 
-	data := dbpool.GetOrm("user").Query("WHERE id=?", 57).GetFieldString("name")
-	log.Println("TestGetFieldString", data)
+	orm = dbpool.Table("user")
+	orm.Exec(false).Fields([]interface{}{"a", "b"}).FetchOne()
+	assert.Equal(t, orm.Sql, "SELECT `a`, `b` FROM `b_user` LIMIT ?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Dest(user{Id: 1, Name: "name"}).FetchOne()
+	assert.Equal(t, orm.Sql, "SELECT `id`, `name` FROM `b_user` LIMIT ?")
 }
 
-func TestGetFieldInt(t *testing.T) {
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+func TestQuery(t *testing.T) {
+	dbpool := getPool()
+	orm := dbpool.Table()
+	orm.Exec(false).Query("UPDATE bb SET 1=1").Update()
+	assert.Equal(t, orm.Sql, "UPDATE bb SET 1=1")
 
-	data := dbpool.GetOrm("user").Query("WHERE id=?", 57).GetFieldString("name")
-	log.Println("TestGetFieldInt", data)
+	orm = dbpool.Table("user")
+	orm.Exec(false).Query("WHERE 1=1").Delete()
+	assert.Equal(t, orm.Sql, "DELETE FROM `b_user` WHERE 1=1")
+
+	orm = dbpool.Table()
+	orm.Exec(false).Query("UPDATE bb").Query("SET a=1").Query("WHERE a=?", 1).FetchOne()
+	assert.Equal(t, orm.Sql, "UPDATE bb SET a=1 WHERE a=? LIMIT ?")
+
 }
 
 func TestUpdate(t *testing.T) {
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+	dbpool := getPool()
+	var orm *Orm
 
-	data, err := dbpool.GetOrm("user").Query("SET coin=coin+1 WHERE id=?", 45175).Update()
-	if err != nil {
-		t.Error(err)
-	}
-	log.Println("TestUpdate", data)
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set("a", 1, "b", 3).Where("a", 1).Where("b", 3).Update()
+	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `a`=?, `b`=? WHERE `a`=? AND `b`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(map[string]interface{}{"a": 2}).Where(map[string]interface{}{"a": 2}).Update()
+	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `a`=? WHERE `a`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Where(user{Id: 1, Name: "name"}).Update()
+	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `name`=? WHERE `id`=?")
 }
 
 func TestInsert(t *testing.T) {
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+	dbpool := getPool()
+	var orm *Orm
 
-	data, err := dbpool.GetOrm("faq").Query("SET name=?,content=?", 123, 345).Insert()
-	if err != nil {
-		t.Error(err)
-	}
-	log.Println("TestInsert", data)
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set("a", 1).Set("b", 3).Insert()
+	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `a`=?, `b`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(map[string]interface{}{"a": 2}).Insert()
+	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `a`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Insert()
+	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `name`=?")
 }
 
-func TestFetchOne(t *testing.T) {
+func TestUnion(t *testing.T) {
+	dbpool := getPool()
 
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+	orm := dbpool.Table("order")
+	orm2 := dbpool.Table("order2")
+	orm.Union(orm2).Exec(false).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`)")
 
-	type User struct {
-		Id int64  `db:"id" json:"id"`
-		W  string `db:"user_nicename"`
-	}
+	orm = dbpool.Table("order")
+	orm.Union().Exec(false).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order`")
 
-	user := &User{}
+	orm = dbpool.Table("order")
+	orm2 = dbpool.Table("order2")
+	orm3 := dbpool.Table("order3")
+	orm.Union(orm2).UnionAll(orm3).Exec(false).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`) UNION ALL (SELECT * FROM `b_order3`)")
 
-	err = dbpool.GetOrm("users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).FetchOne()
-	if err != nil {
-		t.Error(err)
-	}
-	b, _ := json.Marshal(user)
-	log.Println("TestFetchOne", string(b))
-
-}
-
-func TestSelect(t *testing.T) {
-
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
-
-	type User struct {
-		Id int64  `db:"id" json:"id"`
-		W  string `db:"user_nicename"`
-	}
-
-	user := []*User{}
-
-	err = dbpool.GetOrm("users").Field("id", "user_nicename").Dest(&user).Query("WHERE id>?", 45175).Select()
-	if err != nil {
-		t.Error(err)
-	}
-	b, _ := json.Marshal(user)
-	log.Println("TestSelect", string(b))
+	orm = dbpool.Table("order")
+	orm2 = dbpool.Table("order2")
+	orm3 = dbpool.Table("order3")
+	orm.Union(orm2, orm3).Exec(false).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`) UNION (SELECT * FROM `b_order3`)")
 
 }
 
-type A struct {
-	Name string `db:"name"`
+func TestGroup(t *testing.T) {
+	dbpool := getPool()
+	var orm *Orm
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Group("type").Having("a", 1).Having("b", 3).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `a`=? AND `b`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Group("type").Having(map[string]interface{}{"a": 2}).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `a`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Group("type").Having(user{Id: 1, Name: "name"}).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `id`=?")
 }
 
-type B struct {
-	*A
-	Id int `db:"id"`
-}
+func TestChain(t *testing.T) {
+	dbpool := getPool()
+	var orm *Orm
 
-func Test5(t *testing.T) {
+	orm = dbpool.Table()
+	orm.Exec(false).Field("a").Table("user").Alias("u").Order("id desc").Limit(1, 2).Select()
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user` ORDER BY `id` DESC LIMIT ?,?")
 
-	dest := []*B{}
-	val := stringify.GetReflectValue(dest).Type()
-	if val.Kind() == reflect.Slice {
-		val = val.Elem()
-		for val.Kind() == reflect.Ptr {
-			val = val.Elem()
-		}
-	}
+	orm = dbpool.Table()
+	orm.Exec(false).Field("e.a vv").Table("user u").Alias("u1").Table("level e").Order("u.id").Page(1, 2).Select()
+	assert.Equal(t, orm.Sql, "SELECT `e`.`a` `vv` FROM `b_user` `u1`, `b_level` `e` ORDER BY `u`.`id` LIMIT ?,?")
 
-	if val.Kind() == reflect.Struct {
-		fields := []string{}
-
-		loopStruct(val, func(s reflect.StructField) {
-			name := s.Tag.Get("db")
-			if name != "" {
-				fields = append(fields, name)
-			}
-		})
-
-		log.Println(fields)
-	}
-}
-
-func loopStruct(val reflect.Type, f func(s reflect.StructField)) {
-	if val.Kind() != reflect.Struct {
-		return
-	}
-	for k := 0; k < val.NumField(); k++ {
-		ft := val.Field(k).Type
-		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
-			ft = ft.Elem()
-		}
-		if ft.Kind() == reflect.Struct {
-			loopStruct(ft, f)
-		} else {
-			f(val.Field(k))
-		}
-	}
-}
-
-func Test6(t *testing.T) {
-
-	var i []interface{}
-
-	i = append(i, 1)
-
-	log.Println(i)
+	orm = dbpool.Table("user")
+	orm.Exec(false).Page(0, 2).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` LIMIT ?,?")
 
 }
 
-func TestWhereMap(t *testing.T) {
+func TestJoin(t *testing.T) {
+	dbpool := getPool()
+	var orm *Orm
 
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
+	orm = dbpool.Table()
+	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
+	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `b_user` `a` LEFT JOIN `b_user` `b` ON a.id=b.id")
 
-	type User struct {
-		Id int64 `db:"id" json:"id"`
-	}
-
-	user := &User{}
-
-	err = dbpool.GetOrm("user").Dest(user).Where("id", 2).FetchOne()
-	if err != nil {
-		t.Error(err)
-	}
-	b, _ := json.Marshal(user)
-	log.Println("TestWhereMap", string(b))
-
-}
-
-type UserSimple struct {
-	Id   int    `dbwhere:"id"`
-	Name string `dbset:"name"`
-}
-
-type User struct {
-	*UserSimple
-}
-
-func TestPointer(t *testing.T) {
-
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
-
-	user := new(User)
-	user.UserSimple = new(UserSimple)
-	user.Id = 57
-	user.Name = "dde"
-
-	dbpool.GetOrm("user").Dest(user).Set(user).Where(user).Update()
-
-	if user.Id != 57 {
-		t.Error("id not right")
-	}
-
-}
-
-func TestNilPointer(t *testing.T) {
-	dbpool, err := getPool()
-	if err != nil {
-		t.Error(err)
-	}
-
-	orm := dbpool.GetOrm("order")
-
-	total := orm.GetFieldString(field.NewMutiField("SUM(%t)", field.NewField("price_total")))
-
-	log.Println(orm.Err())
-	log.Println(total)
+	orm = dbpool.Table()
+	orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
+	assert.Equal(t, orm.Sql, "SELECT `b`.`c` FROM `b_user` `a` RIGHT JOIN `b_user` `b` ON `a`.`id`=`b`.`id`")
 }

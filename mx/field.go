@@ -4,7 +4,9 @@ import "github.com/uccu/go-stringify"
 
 type Field interface {
 	Query
+	Args
 	With(With) Field
+	ToMix() Mix
 }
 
 type Fields []Field

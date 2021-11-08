@@ -1,6 +1,7 @@
 package field
 
 import (
+	"github.com/uccu/go-mysql/mix"
 	"github.com/uccu/go-mysql/mx"
 )
 
@@ -21,12 +22,14 @@ func (t *Field) With(w mx.With) mx.Field {
 	return t
 }
 
-func (f *Field) SetAs(n string) {
+func (f *Field) SetAlias(n string) *Field {
 	f.Alias = n
+	return f
 }
 
-func (f *Field) SetTable(n string) {
+func (f *Field) SetTable(n string) *Field {
 	f.Table = n
+	return f
 }
 
 func (t *Field) GetName() string {
@@ -67,15 +70,10 @@ func (f *Field) GetQuery() string {
 	return query
 }
 
-func GetField(f interface{}) mx.Field {
-	if k, ok := f.(mx.Field); ok {
-		return k
-	} else if k, ok := f.(string); ok {
-		return NewField(k)
-	}
+func (f *Field) GetArgs() []interface{} {
 	return nil
 }
 
-func (f *Field) GetArgs() []interface{} {
-	return nil
+func (f *Field) ToMix() mx.Mix {
+	return &mix.Field{Field: f}
 }

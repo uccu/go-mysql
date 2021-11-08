@@ -4,8 +4,6 @@ import (
 	"database/sql"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/uccu/go-mysql/mx"
-	"github.com/uccu/go-mysql/table"
 )
 
 type DB struct {
@@ -16,53 +14,32 @@ type DB struct {
 	afterQueryHandler func(*Orm)
 }
 
-func (v *DB) GetOrm(s ...interface{}) *Orm {
-	tables := mx.Tables{}
-	for _, t := range s {
-		if t, ok := t.(mx.Table); ok {
-			tables = append(tables, t)
-			break
-		}
-		if t, ok := t.(string); ok {
-			tables = append(tables, v.NewTable(t))
-			break
-		}
-	}
-
-	if len(tables) > 0 {
-		return &Orm{table: tables, mix: make(mx.Mixs, 0), db: v}
-	} else {
-		return &Orm{table: make(mx.Tables, 0), mix: make(mx.Mixs, 0), db: v}
-	}
-
+func (db *DB) Table(s ...interface{}) *Orm {
+	return db.Default().Table(s...)
 }
 
-func (v *DB) WithPrefix(p string) *DB {
-	v.prefix = p
-	return v
+func (db *DB) Default() *Orm {
+	return &Orm{db: db}
 }
 
-func (v *DB) WithSuffix(p func(interface{}) string) *DB {
-	v.suffix = p
-	return v
+func (db *DB) WithPrefix(p string) *DB {
+	db.prefix = p
+	return db
 }
 
-func (v *DB) WithErrHandler(p func(error)) *DB {
-	v.errHandler = p
-	return v
+func (db *DB) WithSuffix(p func(interface{}) string) *DB {
+	db.suffix = p
+	return db
 }
 
-func (v *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
-	v.afterQueryHandler = p
-	return v
+func (db *DB) WithErrHandler(p func(error)) *DB {
+	db.errHandler = p
+	return db
 }
 
-func (v *DB) NewTable(name string, alias ...string) *table.Table {
-	t := table.NewTable(name, v.prefix, v.suffix)
-	if len(alias) > 0 {
-		t.Alias = alias[0]
-	}
-	return t
+func (db *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
+	db.afterQueryHandler = p
+	return db
 }
 
 func Open(driverName, dataSourceName string) (*DB, error) {

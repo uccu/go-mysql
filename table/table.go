@@ -4,15 +4,8 @@ import (
 	"github.com/uccu/go-mysql/mx"
 )
 
-type join struct {
-	table         mx.Container
-	joinType      mx.JoinType
-	joinCondition mx.ConditionMix
-}
-
-type joins []*join
-
 type Table struct {
+	DBName  string
 	Name    string
 	Alias   string
 	RawName string
@@ -22,8 +15,17 @@ type Table struct {
 	with mx.WithTrait
 }
 
-func (t *Table) With(w mx.With) {
+func (t *Table) With(w mx.With) mx.Container {
 	t.with.With(w)
+
+	if len(t.join) > 0 {
+		for _, j := range t.join {
+			j.table.With(w)
+			j.joinCondition.With(w)
+		}
+	}
+
+	return t
 }
 
 func (t *Table) GetName() string {
@@ -39,6 +41,7 @@ func (t *Table) GetName() string {
 	}
 	return alias
 }
+
 func (t *Table) Suffix(s interface{}) {
 	t.RawName += t.suffix(s)
 }
@@ -50,6 +53,14 @@ func (t *Table) GetQuery() string {
 
 	if t.with.IsWithBackquote() {
 		query = "`" + query + "`"
+	}
+
+	if t.DBName != "" {
+		dbName := t.DBName
+		if t.with.IsWithBackquote() {
+			dbName = "`" + dbName + "`"
+		}
+		query = dbName + "." + query
 	}
 
 	if t.with.IsWithAlias() && t.Alias != "" {
@@ -89,6 +100,45 @@ func (t *Table) GetArgs() []interface{} {
 	return args
 }
 
-func NewTable(name, prefix string, suffix func(interface{}) string) *Table {
-	return &Table{Name: name, RawName: prefix + name, suffix: suffix}
+func (t *Table) SetSuffix(f func(interface{}) string) *Table {
+	t.suffix = f
+	return t
+}
+
+func (t *Table) SetAlias(a string) *Table {
+	t.Alias = a
+	return t
+}
+
+func (t *Table) SetDBName(n string) *Table {
+	t.DBName = n
+	return t
+}
+
+func (t *Table) IsMuti() bool {
+	return len(t.join) > 0
+}
+
+func (t *Table) Join(table mx.Container, typ mx.JoinType, condition mx.ConditionMix) mx.Container {
+
+	if t.join == nil {
+		t.join = make(joins, 0)
+	}
+
+	j := &join{
+		table:         table,
+		joinType:      typ,
+		joinCondition: condition,
+	}
+
+	t.join = append(t.join, j)
+	return t
+}
+
+func NewTable(name string, rawNames ...string) *Table {
+	rawName := name
+	if len(rawNames) > 0 {
+		rawName = rawNames[0]
+	}
+	return &Table{Name: name, RawName: rawName}
 }

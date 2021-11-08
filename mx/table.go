@@ -2,6 +2,14 @@ package mx
 
 import "github.com/uccu/go-stringify"
 
+type Container interface {
+	Query
+	Args
+	Join(Container, JoinType, ConditionMix) Container
+	With(With) Container
+	IsMuti() bool
+}
+
 type Table interface {
 	GetName() string
 	Container
@@ -33,4 +41,16 @@ func (ts Tables) GetArgs() []interface{} {
 		return nil
 	}
 	return args
+}
+
+func (ts Tables) IsMuti() bool {
+	if len(ts) == 0 {
+		return false
+	}
+
+	if len(ts) == 1 {
+		return ts[0].IsMuti()
+	}
+
+	return true
 }

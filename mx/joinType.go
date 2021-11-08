@@ -15,8 +15,8 @@ const (
 )
 
 var joinTypeName = map[JoinType]string{
-	NO_JOIN:    "no join",
-	INNER_JOIN: "inner join",
-	LEFT_JOIN:  "left join",
-	RIGHT_JOIN: "right join",
+	NO_JOIN:    "NO JOIN",
+	INNER_JOIN: "JOIN",
+	LEFT_JOIN:  "LEFT JOIN",
+	RIGHT_JOIN: "RIGHT JOIN",
 }

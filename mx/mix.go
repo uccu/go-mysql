@@ -26,7 +26,7 @@ func (f Mixs) GetQuery() string {
 		list = append(list, f.GetQuery())
 	}
 
-	return stringify.ToString(list, " ")
+	return stringify.ToString(list, "")
 }
 
 func (f Mixs) GetArgs() []interface{} {

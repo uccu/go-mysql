@@ -1,31 +1,30 @@
 package mysql
 
 import (
-	"reflect"
 	"time"
 
-	"github.com/uccu/go-mysql/field"
-	"github.com/uccu/go-mysql/mix"
 	"github.com/uccu/go-mysql/mx"
-	"github.com/uccu/go-stringify"
+	"github.com/uccu/go-mysql/table"
 )
 
 type Orm struct {
-	db      *DB
-	table   mx.Tables
-	mix     mx.Mixs
-	fields  mx.Fields
-	mixType string
-
-	dest interface{}
-	err  error
-
+	db             *DB
+	table          mx.Tables
+	mix            mx.Mixs
+	fields         mx.Fields
+	mixType        string
+	dest           interface{}
+	err            error
 	StartQueryTime time.Time
 	Sql            string
+	b              bool // true 不执行sql
+	orms           []*Orm
+	unionAll       bool
 }
 
 func (v *Orm) Query(query string, args ...interface{}) *Orm {
-	v.addMix(mix.NewMix(" "+query, args...))
+
+	v.addMix(Mix(" "+query, args...))
 	return v
 }
 
@@ -35,21 +34,33 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 		v.mix = make(mx.Mixs, 0)
 	}
 
-	if len(typs) > 0 && v.mixType != typs[0] {
+	if len(typs) > 0 {
 		typ := typs[0]
-		if typ == "where" {
-			v.mix = append(v.mix, mix.NewMix("WHERE"))
-		} else if typ == "set" {
-			v.mix = append(v.mix, mix.NewMix("SET"))
-		} else if typ == "group" {
-			v.mix = append(v.mix, mix.NewMix("GROUP BY"))
+
+		if typ == "group" {
+			v.mix = append(v.mix, Raw(" GROUP BY "))
 		} else if typ == "limit" {
-			v.mix = append(v.mix, mix.NewMix("LIMIT"))
+			v.mix = append(v.mix, Raw(" LIMIT "))
 		} else if typ == "order" {
-			v.mix = append(v.mix, mix.NewMix("ORDER BY"))
-		} else if typ == "having" {
-			v.mix = append(v.mix, mix.NewMix("HAVING"))
+			v.mix = append(v.mix, Raw(" ORDER BY "))
+		} else if v.mixType == typ {
+			switch typ {
+			case "where", "having":
+				v.mix = append(v.mix, Raw(" AND "))
+			case "set":
+				v.mix = append(v.mix, Raw(", "))
+			}
+		} else {
+			switch typ {
+			case "where":
+				v.mix = append(v.mix, Raw(" WHERE "))
+			case "having":
+				v.mix = append(v.mix, Raw(" HAVING "))
+			case "set":
+				v.mix = append(v.mix, Raw(" SET "))
+			}
 		}
+
 		v.mixType = typ
 	}
 
@@ -70,76 +81,45 @@ func (v *Orm) addField(field mx.Field) *Orm {
 	return v
 }
 
-func (v *Orm) transformDestToField() mx.Fields {
-	val := stringify.GetReflectValue(v.dest).Type()
-	if val.Kind() == reflect.Slice {
-		val = val.Elem()
-		for val.Kind() == reflect.Ptr {
-			val = val.Elem()
-		}
+func (v *Orm) addTable(table mx.Table) *Orm {
+	if v.table == nil {
+		v.table = make(mx.Tables, 0)
+	}
+	v.table = append(v.table, table)
+	return v
+}
+
+func (v *Orm) addJoin(typ mx.JoinType, s interface{}, c ...interface{}) *Orm {
+	if len(v.table) == 0 {
+		return v
 	}
 
-	if val.Kind() == reflect.Struct {
-		fields := []string{}
-		loopStructType(val, func(s reflect.StructField) bool {
-			name := s.Tag.Get("db")
-			if name != "" {
-				if name != "-" {
-					fields = append(fields, name)
-				}
-				return true
-			}
-			return false
-		})
-		fields = removeRep(fields)
-		if len(fields) == 0 {
-			return mx.Fields{field.NewRawField("1")}
-		}
-
-		keys := mx.Fields{}
-		for _, f := range fields {
-			keys = append(keys, field.NewField(f))
-		}
-		return keys
+	var container mx.Container
+	if c, ok := s.(mx.Container); ok {
+		container = c
+	} else if s, ok := s.(string); ok {
+		k := transformToKey(s)
+		container = table.NewTable(k.Name, v.db.prefix+k.Name).SetAlias(k.Alias).SetDBName(k.Parent)
+	} else {
+		return v.setErr(ErrNoContainer)
 	}
 
-	return mx.Fields{field.NewRawField("1")}
-}
-
-func (v *Orm) transformFields() string {
-	if len(v.fields) == 0 {
-		if v.dest != nil {
-			fields := v.transformDestToField()
-			fields.With(mx.WithBackquote)
-			if len(v.table) > 1 {
-				fields.With(mx.WithTable)
-			}
-			return fields.GetQuery()
-		}
-		return "*"
+	mixs, err := transformToMixs("dbwhere", c...)
+	if err != nil {
+		return v.setErr(err)
 	}
 
-	if len(v.table) > 1 {
-		v.fields.With(mx.WithTable)
+	v.table[0].Join(container, typ, mx.ConditionMix(mixs))
+
+	return v
+}
+
+func (v *Orm) addUnion(o *Orm) *Orm {
+	if v.orms == nil {
+		v.orms = make([]*Orm, 0)
 	}
-	v.fields.With(mx.WithBackquote)
-	return v.fields.GetQuery()
-}
-
-func (v *Orm) transformSelectSql() string {
-	return "SELECT " + v.transformFields() + " FROM " + v.transformTable() + " " + v.transformQuery()
-}
-
-func (v *Orm) transformUpdateSql() string {
-	return "UPDATE " + v.transformTable() + " " + v.transformQuery()
-}
-
-func (v *Orm) transformDeleteSql() string {
-	return "DELETE " + v.transformTable() + " " + v.transformQuery()
-}
-
-func (v *Orm) transformInsertSql() string {
-	return "INSERT INTO " + v.transformTable() + " " + v.transformQuery()
+	v.orms = append(v.orms, o)
+	return v
 }
 
 func (v *Orm) Err() error {
@@ -154,25 +134,6 @@ func (v *Orm) setErr(e error) *Orm {
 	return v
 }
 
-func (v *Orm) transformTable() string {
-	if len(v.table) > 1 {
-		v.table.With(mx.WithTable)
-	}
-	v.table.With(mx.WithBackquote)
-	return v.table.GetQuery()
-}
-func (v *Orm) transformQuery() string {
-	if len(v.table) > 1 {
-		v.mix.With(mx.WithTable)
-	}
-	v.mix.With(mx.WithBackquote)
-	return v.mix.GetQuery()
-}
-
 func (v *Orm) GetArgs() []interface{} {
-	if len(v.table) > 1 {
-		v.mix.With(mx.WithTable)
-	}
-	v.mix.With(mx.WithBackquote)
 	return v.mix.GetArgs()
 }
