@@ -53,15 +53,13 @@ func (v *Orm) transformDestToField() mx.Fields {
 			return false
 		})
 		fields = removeRep(fields)
-		if len(fields) == 0 {
-			return mx.Fields{field.NewRawField("1")}
+		if len(fields) > 0 {
+			keys := mx.Fields{}
+			for _, f := range fields {
+				keys = append(keys, field.NewField(f))
+			}
+			return keys
 		}
-
-		keys := mx.Fields{}
-		for _, f := range fields {
-			keys = append(keys, field.NewField(f))
-		}
-		return keys
 	}
 
 	return mx.Fields{field.NewRawField("1")}

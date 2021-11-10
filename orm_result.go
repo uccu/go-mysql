@@ -8,7 +8,15 @@ import (
 	"github.com/uccu/go-stringify"
 )
 
-func (v *Orm) startQuery(sql string) {
+func (v *Orm) startQuery(f func() string) {
+
+	var sql string
+	if len(v.table) > 0 {
+		sql = f()
+	} else {
+		sql = v.transformQuery()
+	}
+
 	v.StartQueryTime = time.Now()
 	v.Sql = sql
 }
@@ -22,11 +30,9 @@ func (v *Orm) afterQuery() {
 // 获取多条数据
 func (v *Orm) Select() error {
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformSelectSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformSelectSql()
+	})
 
 	if len(v.orms) > 0 {
 		for _, o := range v.orms {
@@ -67,11 +73,9 @@ func (v *Orm) FetchOne() error {
 
 	v.Limit(1)
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformSelectSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformSelectSql()
+	})
 
 	if v.b {
 		return nil
@@ -98,11 +102,9 @@ func (v *Orm) FetchOne() error {
 // 更新
 func (v *Orm) Update() (int64, error) {
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformUpdateSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformUpdateSql()
+	})
 
 	if v.b {
 		return 0, nil
@@ -122,11 +124,9 @@ func (v *Orm) Update() (int64, error) {
 // 插入
 func (v *Orm) Insert() (int64, error) {
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformInsertSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformInsertSql()
+	})
 
 	if v.b {
 		return 0, nil
@@ -144,11 +144,9 @@ func (v *Orm) Insert() (int64, error) {
 
 func (v *Orm) Replace() (int64, error) {
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformReplaceSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformReplaceSql()
+	})
 
 	if v.b {
 		return 0, nil
@@ -167,11 +165,9 @@ func (v *Orm) Replace() (int64, error) {
 // 删除
 func (v *Orm) Delete() (int64, error) {
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformDeleteSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformDeleteSql()
+	})
 
 	if v.b {
 		return 0, nil
@@ -192,11 +188,9 @@ func (v *Orm) GetField(name interface{}) error {
 	v.Field(name)
 	v.Limit(1)
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformSelectSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformSelectSql()
+	})
 
 	if v.b {
 		return nil
@@ -223,11 +217,9 @@ func (v *Orm) GetField(name interface{}) error {
 func (v *Orm) GetFields(name string) error {
 	v.Field(name)
 
-	if len(v.table) > 0 {
-		v.startQuery(v.transformSelectSql())
-	} else {
-		v.startQuery(v.transformQuery())
-	}
+	v.startQuery(func() string {
+		return v.transformSelectSql()
+	})
 
 	if v.b {
 		return nil
