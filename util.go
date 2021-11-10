@@ -26,6 +26,16 @@ var (
 	ErrNoRows            = sql.ErrNoRows
 )
 
+type sqlType byte
+
+const (
+	SQL_SELECT sqlType = iota
+	SQL_DELETE
+	SQL_UPDATE
+	SQL_INSERT
+	SQL_REPLACE
+)
+
 type column struct {
 	Dest interface{}
 }

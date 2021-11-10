@@ -8,11 +8,22 @@ import (
 	"github.com/uccu/go-stringify"
 )
 
-func (v *Orm) startQuery(f func() string) {
+func (v *Orm) startQuery(t sqlType) {
 
 	var sql string
 	if len(v.table) > 0 {
-		sql = f()
+		switch t {
+		case SQL_SELECT:
+			sql = v.transformSelectSql()
+		case SQL_UPDATE:
+			sql = v.transformUpdateSql()
+		case SQL_INSERT:
+			sql = v.transformInsertSql()
+		case SQL_DELETE:
+			sql = v.transformDeleteSql()
+		case SQL_REPLACE:
+			sql = v.transformReplaceSql()
+		}
 	} else {
 		sql = v.transformQuery()
 	}
@@ -30,9 +41,7 @@ func (v *Orm) afterQuery() {
 // 获取多条数据
 func (v *Orm) Select() error {
 
-	v.startQuery(func() string {
-		return v.transformSelectSql()
-	})
+	v.startQuery(SQL_SELECT)
 
 	if len(v.orms) > 0 {
 		for _, o := range v.orms {
@@ -73,9 +82,7 @@ func (v *Orm) FetchOne() error {
 
 	v.Limit(1)
 
-	v.startQuery(func() string {
-		return v.transformSelectSql()
-	})
+	v.startQuery(SQL_SELECT)
 
 	if v.b {
 		return nil
@@ -102,9 +109,7 @@ func (v *Orm) FetchOne() error {
 // 更新
 func (v *Orm) Update() (int64, error) {
 
-	v.startQuery(func() string {
-		return v.transformUpdateSql()
-	})
+	v.startQuery(SQL_UPDATE)
 
 	if v.b {
 		return 0, nil
@@ -124,9 +129,7 @@ func (v *Orm) Update() (int64, error) {
 // 插入
 func (v *Orm) Insert() (int64, error) {
 
-	v.startQuery(func() string {
-		return v.transformInsertSql()
-	})
+	v.startQuery(SQL_INSERT)
 
 	if v.b {
 		return 0, nil
@@ -144,9 +147,7 @@ func (v *Orm) Insert() (int64, error) {
 
 func (v *Orm) Replace() (int64, error) {
 
-	v.startQuery(func() string {
-		return v.transformReplaceSql()
-	})
+	v.startQuery(SQL_REPLACE)
 
 	if v.b {
 		return 0, nil
@@ -165,9 +166,7 @@ func (v *Orm) Replace() (int64, error) {
 // 删除
 func (v *Orm) Delete() (int64, error) {
 
-	v.startQuery(func() string {
-		return v.transformDeleteSql()
-	})
+	v.startQuery(SQL_DELETE)
 
 	if v.b {
 		return 0, nil
@@ -188,9 +187,7 @@ func (v *Orm) GetField(name interface{}) error {
 	v.Field(name)
 	v.Limit(1)
 
-	v.startQuery(func() string {
-		return v.transformSelectSql()
-	})
+	v.startQuery(SQL_SELECT)
 
 	if v.b {
 		return nil
@@ -217,9 +214,7 @@ func (v *Orm) GetField(name interface{}) error {
 func (v *Orm) GetFields(name string) error {
 	v.Field(name)
 
-	v.startQuery(func() string {
-		return v.transformSelectSql()
-	})
+	v.startQuery(SQL_SELECT)
 
 	if v.b {
 		return nil
