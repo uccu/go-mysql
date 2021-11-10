@@ -106,10 +106,9 @@ func (v *Orm) FetchOne() error {
 	return nil
 }
 
-// 更新
-func (v *Orm) Update() (int64, error) {
+func (v *Orm) exec(s sqlType, r resultType) (int64, error) {
 
-	v.startQuery(SQL_UPDATE)
+	v.startQuery(s)
 
 	if v.b {
 		return 0, nil
@@ -122,63 +121,30 @@ func (v *Orm) Update() (int64, error) {
 	}
 
 	v.afterQuery()
+	if r == RESULT_LAST_INSERT_ID {
+		return result.LastInsertId()
+	}
 
 	return result.RowsAffected()
+}
+
+// 更新
+func (v *Orm) Update() (int64, error) {
+	return v.exec(SQL_UPDATE, RESULT_ROWS_AFFECTED)
 }
 
 // 插入
 func (v *Orm) Insert() (int64, error) {
-
-	v.startQuery(SQL_INSERT)
-
-	if v.b {
-		return 0, nil
-	}
-
-	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
-	if err != nil {
-		v.setErr(err)
-		return 0, err
-	}
-	v.afterQuery()
-
-	return result.LastInsertId()
+	return v.exec(SQL_INSERT, RESULT_LAST_INSERT_ID)
 }
 
 func (v *Orm) Replace() (int64, error) {
-
-	v.startQuery(SQL_REPLACE)
-
-	if v.b {
-		return 0, nil
-	}
-
-	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
-	if err != nil {
-		v.setErr(err)
-		return 0, err
-	}
-	v.afterQuery()
-
-	return result.LastInsertId()
+	return v.exec(SQL_REPLACE, RESULT_LAST_INSERT_ID)
 }
 
 // 删除
 func (v *Orm) Delete() (int64, error) {
-
-	v.startQuery(SQL_DELETE)
-
-	if v.b {
-		return 0, nil
-	}
-
-	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
-	if err != nil {
-		v.setErr(err)
-		return 0, err
-	}
-	v.afterQuery()
-	return result.RowsAffected()
+	return v.exec(SQL_DELETE, RESULT_ROWS_AFFECTED)
 }
 
 // 获取单个字段的值

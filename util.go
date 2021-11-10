@@ -27,6 +27,7 @@ var (
 )
 
 type sqlType byte
+type resultType byte
 
 const (
 	SQL_SELECT sqlType = iota
@@ -34,6 +35,11 @@ const (
 	SQL_UPDATE
 	SQL_INSERT
 	SQL_REPLACE
+)
+
+const (
+	RESULT_LAST_INSERT_ID resultType = iota
+	RESULT_ROWS_AFFECTED
 )
 
 type column struct {
