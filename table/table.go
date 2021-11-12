@@ -15,7 +15,7 @@ type Table struct {
 	with mx.WithTrait
 }
 
-func (t *Table) With(w mx.With) mx.Container {
+func (t *Table) With(w mx.With) {
 	t.with.With(w)
 
 	if len(t.join) > 0 {
@@ -25,7 +25,6 @@ func (t *Table) With(w mx.With) mx.Container {
 		}
 	}
 
-	return t
 }
 
 func (t *Table) GetName() string {

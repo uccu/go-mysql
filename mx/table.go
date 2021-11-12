@@ -3,10 +3,8 @@ package mx
 import "github.com/uccu/go-stringify"
 
 type Container interface {
-	Query
-	Args
+	Mix
 	Join(Container, JoinType, ConditionMix) Container
-	With(With) Container
 	IsMuti() bool
 }
 
@@ -17,11 +15,10 @@ type Table interface {
 
 type Tables []Table
 
-func (ts Tables) With(w With) Tables {
+func (ts Tables) With(w With) {
 	for _, t := range ts {
 		t.With(w)
 	}
-	return ts
 }
 
 func (ts Tables) GetQuery() string {

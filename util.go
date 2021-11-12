@@ -282,7 +282,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 			return false
 		}
 		if v.CanInterface() {
-			p = append(p, Mix("%t=?", field.NewField(db).ToMix(), v.Interface()))
+			p = append(p, Mix("%t=?", field.NewField(db), v.Interface()))
 
 			return true
 		}
@@ -298,7 +298,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 func transformMapToMixs(s map[string]interface{}) mx.Mixs {
 	p := mx.Mixs{}
 	for k, v := range s {
-		p = append(p, Mix("%t=?", field.NewField(k).ToMix(), v))
+		p = append(p, Mix("%t=?", field.NewField(k), v))
 	}
 	return p
 }
@@ -306,7 +306,7 @@ func transformMapToMixs(s map[string]interface{}) mx.Mixs {
 func transformSliceToMixs(s ...interface{}) mx.Mixs {
 	p := mx.Mixs{}
 	for k := 0; k < len(s); k += 2 {
-		p = append(p, Mix("%t=?", field.NewField(s[k].(string)).ToMix(), s[k+1]))
+		p = append(p, Mix("%t=?", field.NewField(s[k].(string)), s[k+1]))
 	}
 	return p
 }
@@ -332,13 +332,9 @@ func transformToMixs(tagName string, s ...interface{}) (mx.Mixs, error) {
 	return mixs, nil
 }
 
-func Field(f string) *field.Field {
+func Field(f string) mx.Field {
 	k := transformToKey(f)
-	return field.NewField(k.Name).SetAlias(k.Alias).SetTable(k.Parent)
-}
-
-func FieldMix(f string) mx.Mix {
-	return Field(f).ToMix()
+	return field.NewField(k.Name).SetTable(k.Parent).SetAlias(k.Alias)
 }
 
 func Table(f string) *table.Table {
@@ -348,6 +344,10 @@ func Table(f string) *table.Table {
 
 func Raw(f string) *mix.Raw {
 	return mix.NewRawMix(f)
+}
+
+func RawField(f string) *field.RawField {
+	return field.NewRawField(f)
 }
 
 func Mix(q string, f ...interface{}) *mix.Mix {
@@ -364,9 +364,9 @@ func Mix(q string, f ...interface{}) *mix.Mix {
 				mixs = append(mixs, v)
 				args = append(args, v.GetArgs()...)
 			} else if v, ok := f[k].(mx.Field); ok {
-				mixs = append(mixs, v.ToMix())
+				mixs = append(mixs, v)
 			} else if v, ok := f[k].(string); ok {
-				mixs = append(mixs, Field(v).ToMix())
+				mixs = append(mixs, Field(v))
 			} else {
 				mixs = append(mixs, Raw("NULL"))
 			}

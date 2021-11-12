@@ -8,8 +8,7 @@ type Raw struct {
 	q string
 }
 
-func (t *Raw) With(w mx.With) mx.Mix {
-	return t
+func (t *Raw) With(w mx.With) {
 }
 
 func (m *Raw) GetQuery() string {

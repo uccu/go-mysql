@@ -3,10 +3,8 @@ package mx
 import "github.com/uccu/go-stringify"
 
 type Field interface {
-	Query
-	Args
-	With(With) Field
-	ToMix() Mix
+	Mix
+	SetAlias(string) Field
 }
 
 type Fields []Field

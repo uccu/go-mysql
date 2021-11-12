@@ -14,10 +14,9 @@ type Mix struct {
 	with mx.WithTrait
 }
 
-func (t *Mix) With(w mx.With) mx.Mix {
+func (t *Mix) With(w mx.With) {
 	t.with.With(w)
 	t.m.With(w)
-	return t
 }
 
 func (m *Mix) GetQuery() string {

@@ -233,7 +233,7 @@ func (v *Orm) Count(f ...string) int64 {
 	if len(f) > 0 {
 		return v.GetFieldInt(field.NewMutiField("COUNT(%t)", Field(f[0])))
 	}
-	return v.GetFieldInt(field.NewRawField("COUNT(1)"))
+	return v.GetFieldInt(RawField("COUNT(1)"))
 }
 
 func (v *Orm) Sum(f string) int64 {
@@ -245,7 +245,7 @@ func (v *Orm) SumFloat(f string) float64 {
 }
 
 func (v *Orm) Exist() bool {
-	return v.GetFieldInt(field.NewRawField("1")) != 0
+	return v.GetFieldInt(RawField("1")) != 0
 }
 
 func (v *Orm) GetFieldsString(name string) []string {

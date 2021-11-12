@@ -1,20 +1,38 @@
 package field
 
 import (
-	"github.com/uccu/go-mysql/mix"
 	"github.com/uccu/go-mysql/mx"
 )
 
 type RawField struct {
-	q string
+	q     string
+	Alias string
+	with  mx.WithTrait
+}
+
+func (t *RawField) With(w mx.With) {
+	t.with.With(w)
+}
+
+func (f *RawField) SetAlias(n string) mx.Field {
+	f.Alias = n
+	return f
 }
 
 func (f *RawField) GetQuery() string {
-	return f.q
-}
 
-func (t *RawField) With(w mx.With) mx.Field {
-	return t
+	f.with.SetQuery()
+	query := f.q
+	if f.Alias != "" {
+		if f.with.IsWithBackquote() {
+			query += " `" + f.Alias + "`"
+		} else {
+			query += " " + f.Alias
+		}
+	}
+
+	f.with.Reset()
+	return query
 }
 
 func (f *RawField) GetArgs() []interface{} {
@@ -22,9 +40,5 @@ func (f *RawField) GetArgs() []interface{} {
 }
 
 func NewRawField(q string) *RawField {
-	return &RawField{q}
-}
-
-func (f *RawField) ToMix() mx.Mix {
-	return &mix.Field{Field: f}
+	return &RawField{q: q}
 }

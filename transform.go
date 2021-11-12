@@ -62,7 +62,7 @@ func (v *Orm) transformDestToField() mx.Fields {
 		}
 	}
 
-	return mx.Fields{field.NewRawField("1")}
+	return mx.Fields{RawField("1")}
 }
 
 func (v *Orm) transformFields() string {

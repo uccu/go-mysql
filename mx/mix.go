@@ -3,18 +3,17 @@ package mx
 import "github.com/uccu/go-stringify"
 
 type Mix interface {
-	Query
-	Args
-	With(With) Mix
+	GetQuery() string
+	GetArgs() []interface{}
+	With(With)
 }
 
 type Mixs []Mix
 
-func (f Mixs) With(w With) Mix {
+func (f Mixs) With(w With) {
 	for _, f := range f {
 		f.With(w)
 	}
-	return f
 }
 
 func (f Mixs) GetQuery() string {
@@ -58,8 +57,8 @@ func (f ConditionMix) GetArgs() []interface{} {
 	return Mixs(f).GetArgs()
 }
 
-func (f ConditionMix) With(w With) Mix {
-	return Mixs(f).With(w)
+func (f ConditionMix) With(w With) {
+	Mixs(f).With(w)
 }
 
 type SliceMix []Mix
@@ -80,6 +79,6 @@ func (f SliceMix) GetArgs() []interface{} {
 	return Mixs(f).GetArgs()
 }
 
-func (f SliceMix) With(w With) Mix {
-	return Mixs(f).With(w)
+func (f SliceMix) With(w With) {
+	Mixs(f).With(w)
 }

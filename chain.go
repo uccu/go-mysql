@@ -15,7 +15,7 @@ func (v *Orm) Fields(fields []interface{}) *Orm {
 		}
 		if k, ok := f.(string); ok {
 			k := transformToKey(k)
-			v.addField(field.NewField(k.Name).SetAlias(k.Alias).SetTable(k.Parent))
+			v.addField(field.NewField(k.Name).SetTable(k.Parent).SetAlias(k.Alias))
 		}
 	}
 	return v
@@ -94,9 +94,9 @@ func (v *Orm) Order(s string) *Orm {
 		// Alias 为ASC/DESC
 		f := field.NewField(k.Name).SetTable(k.Parent)
 		if k.Alias == "DESC" || k.Alias == "desc" {
-			p = append(p, Mix("%t DESC", f.ToMix()))
+			p = append(p, Mix("%t DESC", f))
 		} else {
-			p = append(p, f.ToMix())
+			p = append(p, f)
 		}
 
 	}
@@ -108,7 +108,7 @@ func (v *Orm) Group(s string) *Orm {
 	p := mx.SliceMix{}
 	for _, k := range keys {
 		f := field.NewField(k.Name).SetTable(k.Parent)
-		p = append(p, f.ToMix())
+		p = append(p, f)
 	}
 	return v.addMix(p, "group")
 }
