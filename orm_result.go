@@ -240,6 +240,10 @@ func (v *Orm) Sum(f string) int64 {
 	return v.GetFieldInt(field.NewMutiField("SUM(%t)", Field(f)))
 }
 
+func (v *Orm) SumFloat(f string) float64 {
+	return stringify.ToFloat(v.GetFieldString(field.NewMutiField("SUM(%t)", Field(f))))
+}
+
 func (v *Orm) Exist() bool {
 	return v.GetFieldInt(field.NewRawField("1")) != 0
 }
