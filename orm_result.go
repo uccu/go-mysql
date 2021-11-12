@@ -218,15 +218,21 @@ func (v *Orm) GetFields(name string) error {
 }
 
 func (v *Orm) GetFieldString(f interface{}) string {
-	var data string
+	var data *string
 	v.Dest(&data).GetField(f)
-	return data
+	if data == nil {
+		return ""
+	}
+	return *data
 }
 
 func (v *Orm) GetFieldInt(f interface{}) int64 {
-	var data int64
+	var data *int64
 	v.Dest(&data).GetField(f)
-	return data
+	if data == nil {
+		return 0
+	}
+	return *data
 }
 
 func (v *Orm) Count(f ...string) int64 {
