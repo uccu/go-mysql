@@ -33,6 +33,11 @@ func (v *Orm) using(tagName, typ string, s ...interface{}) *Orm {
 	if err != nil {
 		return v.setErr(err)
 	}
+
+	if typ == "set" {
+		return v.addMix(mx.SliceMix(mixs), typ)
+	}
+
 	return v.addMix(mx.ConditionMix(mixs), typ)
 }
 
