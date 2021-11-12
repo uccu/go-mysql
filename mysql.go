@@ -10,7 +10,7 @@ type DB struct {
 	*sql.DB
 	prefix            string
 	suffix            func(interface{}) string
-	errHandler        func(error)
+	errHandler        func(error, *Orm)
 	afterQueryHandler func(*Orm)
 }
 
@@ -32,7 +32,7 @@ func (db *DB) WithSuffix(p func(interface{}) string) *DB {
 	return db
 }
 
-func (db *DB) WithErrHandler(p func(error)) *DB {
+func (db *DB) WithErrHandler(p func(error, *Orm)) *DB {
 	db.errHandler = p
 	return db
 }

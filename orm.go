@@ -129,7 +129,7 @@ func (v *Orm) Err() error {
 func (v *Orm) setErr(e error) *Orm {
 	v.err = e
 	if v.db.errHandler != nil {
-		v.db.errHandler(e)
+		v.db.errHandler(e, v)
 	}
 	return v
 }

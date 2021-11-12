@@ -28,7 +28,8 @@ func getPool() *DB {
 		panic(err)
 	}
 
-	dbpool.WithErrHandler(func(e error) {
+	dbpool.WithErrHandler(func(e error, o *Orm) {
+		log.Println("sql: ", o.Sql, o.GetArgs())
 		log.Println(fmt.Sprintln(e))
 	})
 	dbpool.WithAfterQueryHandler(func(o *Orm) {
