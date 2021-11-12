@@ -371,7 +371,7 @@ func Mix(q string, f ...interface{}) *mix.Mix {
 				mixs = append(mixs, Raw("NULL"))
 			}
 		} else {
-			args = append(args, f)
+			args = append(args, f[k])
 		}
 		k++
 	}
