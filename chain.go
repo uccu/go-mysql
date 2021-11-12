@@ -25,37 +25,27 @@ func (v *Orm) Field(fields ...interface{}) *Orm {
 	return v.Fields(fields)
 }
 
-func (v *Orm) Where(s ...interface{}) *Orm {
+func (v *Orm) using(tagName, typ string, s ...interface{}) *Orm {
 	if len(s) == 0 {
 		return v
 	}
-	mixs, err := transformToMixs("dbwhere", s...)
+	mixs, err := transformToMixs(tagName, s...)
 	if err != nil {
 		return v.setErr(err)
 	}
-	return v.addMix(mx.ConditionMix(mixs), "where")
+	return v.addMix(mx.ConditionMix(mixs), typ)
+}
+
+func (v *Orm) Where(s ...interface{}) *Orm {
+	return v.using("dbwhere", "where", s...)
 }
 
 func (v *Orm) Having(s ...interface{}) *Orm {
-	if len(s) == 0 {
-		return v
-	}
-	mixs, err := transformToMixs("dbwhere", s...)
-	if err != nil {
-		return v.setErr(err)
-	}
-	return v.addMix(mx.ConditionMix(mixs), "having")
+	return v.using("dbwhere", "having", s...)
 }
 
 func (v *Orm) Set(s ...interface{}) *Orm {
-	if len(s) == 0 {
-		return v
-	}
-	mixs, err := transformToMixs("dbset", s...)
-	if err != nil {
-		return v.setErr(err)
-	}
-	return v.addMix(mx.SliceMix(mixs), "set")
+	return v.using("dbset", "set", s...)
 }
 
 // 添加表

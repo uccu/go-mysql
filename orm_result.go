@@ -230,12 +230,14 @@ func (v *Orm) GetFieldInt(f interface{}) int64 {
 }
 
 func (v *Orm) Count(f ...string) int64 {
-
 	if len(f) > 0 {
-		k := transformToKey(f[0])
-		return v.GetFieldInt(field.NewMutiField("COUNT(%t)", field.NewField(k.Name).SetAlias(k.Alias).SetTable(k.Parent)))
+		return v.GetFieldInt(field.NewMutiField("COUNT(%t)", Field(f[0])))
 	}
 	return v.GetFieldInt(field.NewRawField("COUNT(1)"))
+}
+
+func (v *Orm) Sum(f string) int64 {
+	return v.GetFieldInt(field.NewMutiField("SUM(%t)", Field(f)))
 }
 
 func (v *Orm) Exist() bool {
