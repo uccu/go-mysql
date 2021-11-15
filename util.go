@@ -298,7 +298,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 func transformMapToMixs(s map[string]interface{}) mx.Mixs {
 	p := mx.Mixs{}
 	for k, v := range s {
-		p = append(p, Mix("%t=?", field.NewField(k), v))
+		p = append(p, Mix("%t=?", Field(k), v))
 	}
 	return p
 }
@@ -306,7 +306,7 @@ func transformMapToMixs(s map[string]interface{}) mx.Mixs {
 func transformSliceToMixs(s ...interface{}) mx.Mixs {
 	p := mx.Mixs{}
 	for k := 0; k < len(s); k += 2 {
-		p = append(p, Mix("%t=?", field.NewField(s[k].(string)), s[k+1]))
+		p = append(p, Mix("%t=?", Field(s[k].(string)), s[k+1]))
 	}
 	return p
 }
