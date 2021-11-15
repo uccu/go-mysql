@@ -40,6 +40,7 @@ func (v *Orm) transformDestToField() mx.Fields {
 		}
 	}
 
+	keys := mx.Fields{}
 	if val.Kind() == reflect.Struct {
 		fields := []string{}
 		loopStructType(val, func(s reflect.StructField) bool {
@@ -54,16 +55,17 @@ func (v *Orm) transformDestToField() mx.Fields {
 		})
 		fields = removeRep(fields)
 		if len(fields) > 0 {
-			keys := mx.Fields{}
 			for _, f := range fields {
 				keys = append(keys, field.NewField(f))
 			}
-			return keys
+		} else {
+			keys = append(keys, RawField("1"))
 		}
-		return mx.Fields{RawField("1")}
+	} else {
+		keys = append(keys, RawField("*"))
 	}
 
-	return mx.Fields{RawField("*")}
+	return keys
 }
 
 func (v *Orm) transformFields() string {

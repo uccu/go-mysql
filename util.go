@@ -193,12 +193,10 @@ func loopStruct(val reflect.Value, f func(v reflect.Value, s reflect.StructField
 		}
 
 		for ft.Kind() == reflect.Ptr || ft.Kind() == reflect.Interface {
-			if ft.Kind() == reflect.Ptr {
-				if ft.Type().Elem().Kind() == reflect.Struct {
-					if ft.Elem().Kind() == reflect.Invalid {
-						ft.Set(reflect.New(ft.Type().Elem()))
-					}
-				}
+			if ft.Kind() == reflect.Ptr &&
+				ft.Type().Elem().Kind() == reflect.Struct &&
+				ft.Elem().Kind() == reflect.Invalid {
+				ft.Set(reflect.New(ft.Type().Elem()))
 			}
 			ft = ft.Elem()
 		}
@@ -278,10 +276,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 		if db == "-" {
 			return true
 		}
-		if db == "" {
-			return false
-		}
-		if v.CanInterface() {
+		if db != "" && v.CanInterface() {
 			p = append(p, Mix("%t=?", field.NewField(db), v.Interface()))
 
 			return true
@@ -290,7 +285,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 	})
 
 	if len(p) == 0 {
-		return nil
+		p = nil
 	}
 	return p
 }

@@ -196,13 +196,13 @@ func TestJoin(t *testing.T) {
 	dbpool := getPool()
 	var orm *Orm
 
-	// orm = dbpool.Table()
-	// orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
-	// assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `b_user` `a` LEFT JOIN `b_user` `b` ON a.id=b.id")
+	orm = dbpool.Table()
+	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
+	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `b_user` `a` LEFT JOIN `b_user` `b` ON a.id=b.id")
 
-	// orm = dbpool.Table()
-	// orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
-	// assert.Equal(t, orm.Sql, "SELECT `b`.`c` FROM `b_user` `a` RIGHT JOIN `b_user` `b` ON `a`.`id`=`b`.`id`")
+	orm = dbpool.Table()
+	orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
+	assert.Equal(t, orm.Sql, "SELECT `b`.`c` FROM `b_user` `a` RIGHT JOIN `b_user` `b` ON `a`.`id`=`b`.`id`")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Field("user.c").RightJoin("goods", Mix("ON %t=%t", "user.id", "goods.user_id")).Where("user.id", 1).Select()
