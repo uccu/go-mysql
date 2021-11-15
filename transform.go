@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/uccu/go-mysql/field"
 	"github.com/uccu/go-mysql/mx"
 	"github.com/uccu/go-stringify"
 )
@@ -56,7 +55,7 @@ func (v *Orm) transformDestToField() mx.Fields {
 		fields = removeRep(fields)
 		if len(fields) > 0 {
 			for _, f := range fields {
-				keys = append(keys, field.NewField(f))
+				keys = append(keys, Field(f))
 			}
 		} else {
 			keys = append(keys, RawField("1"))

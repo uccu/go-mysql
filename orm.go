@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/uccu/go-mysql/mx"
-	"github.com/uccu/go-mysql/table"
 )
 
 type Orm struct {
@@ -91,15 +90,14 @@ func (v *Orm) addTable(table mx.Table) *Orm {
 
 func (v *Orm) addJoin(typ mx.JoinType, s interface{}, c ...interface{}) *Orm {
 	if len(v.table) == 0 {
-		return v
+		return v.setErr(ErrNoTable)
 	}
 
 	var container mx.Container
 	if c, ok := s.(mx.Container); ok {
 		container = c
 	} else if s, ok := s.(string); ok {
-		k := transformToKey(s)
-		container = table.NewTable(k.Name, v.db.prefix+k.Name).SetAlias(k.Alias).SetDBName(k.Parent)
+		container = Table(s, v.db.prefix)
 	} else {
 		return v.setErr(ErrNoContainer)
 	}

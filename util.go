@@ -22,6 +22,7 @@ var (
 	ErrNilPointer        = errors.New("pass a nil pointer")
 	ErrOddNumberOfParams = errors.New("odd number of parameters")
 	ErrNoContainer       = errors.New("no container")
+	ErrNoTable           = errors.New("no table")
 	ErrType              = errors.New("error type")
 	ErrNoRows            = sql.ErrNoRows
 )
@@ -143,12 +144,12 @@ func getSlice(dest interface{}) (reflect.Value, error) {
 
 	value = stringify.GetReflectValue(value)
 
-	if value.IsNil() {
-		return reflect.Value{}, ErrNilPointer
-	}
-
 	if value.Kind() != reflect.Slice {
 		return reflect.Value{}, ErrNotSlice
+	}
+
+	if value.IsNil() {
+		return reflect.Value{}, ErrNilPointer
 	}
 
 	return value, nil
@@ -277,7 +278,7 @@ func transformStructToMixs(s interface{}, tagName string) mx.Mixs {
 			return true
 		}
 		if db != "" && v.CanInterface() {
-			p = append(p, Mix("%t=?", field.NewField(db), v.Interface()))
+			p = append(p, Mix("%t=?", Field(db), v.Interface()))
 
 			return true
 		}
@@ -332,9 +333,13 @@ func Field(f string) mx.Field {
 	return field.NewField(k.Name).SetTable(k.Parent).SetAlias(k.Alias)
 }
 
-func Table(f string) *table.Table {
+func Table(f string, prefix ...string) *table.Table {
 	k := transformToKey(f)
-	return table.NewTable(k.Name).SetAlias(k.Alias).SetDBName(k.Parent)
+	var pre string
+	if len(prefix) > 0 {
+		pre = prefix[0]
+	}
+	return table.NewTable(k.Name, pre+k.Name).SetAlias(k.Alias).SetDBName(k.Parent)
 }
 
 func Raw(f string) *mix.Raw {

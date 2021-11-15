@@ -15,7 +15,7 @@ type user struct {
 }
 
 func getPool() *DB {
-	dbpool, err := Open("mysql", "")
+	dbpool, err := Open("mysql", "billiards_test:YkAxFxXLyWhtjraG@tcp(60.205.184.251:3306)/billiards_test?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
 	if err != nil {
 		panic(err)
 	}
@@ -137,6 +137,10 @@ func TestInsert(t *testing.T) {
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Insert()
 	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `name`=?")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Replace()
+	assert.Equal(t, orm.Sql, "REPLACE INTO `b_user` SET `name`=?")
 }
 
 func TestUnion(t *testing.T) {
@@ -205,6 +209,9 @@ func TestJoin(t *testing.T) {
 	var orm *Orm
 
 	orm = dbpool.Table()
+	orm.Join("user")
+	assert.Equal(t, orm.Err(), ErrNoTable)
+
 	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
 	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `b_user` `a` LEFT JOIN `b_user` `b` ON a.id=b.id")
 
@@ -218,21 +225,52 @@ func TestJoin(t *testing.T) {
 }
 
 func TestResult(t *testing.T) {
+
+	var err error
 	dbpool := getPool()
 
 	dbpool.Table("user").GetFieldInt("id")
 	dbpool.Table("user").GetFieldString("id")
 	dbpool.Table("user").GetFieldsInt("id")
 	dbpool.Table("user").GetFieldsString("id")
+	dbpool.Table("user").Exec(false).Sum("id")
+	dbpool.Table("user").Exec(false).SumFloat("id")
+	dbpool.Table("user").Exec(false).Exist()
 
-	user := &struct {
-		Id int64 `db:"id"`
-	}{}
+	user := &user{}
 
-	dbpool.Table("user").Dest(user).FetchOne()
+	_, err = dbpool.Table("user").Where(Raw("id=")).Delete()
+	assert.NotNil(t, err)
+
 	dbpool.Table("user").Where(Raw("id=0")).Delete()
 	dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=0")).Update()
-	err := dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
+	err = dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
 
 	assert.Equal(t, err, ErrNoRows)
+}
+
+func TestSelect(t *testing.T) {
+
+	var err error
+	dbpool := getPool()
+	users := []*user{}
+	err = dbpool.Table("user").Dest(&users).Where(Raw("id>0")).Limit(1).Select()
+	assert.Nil(t, err)
+
+	err = dbpool.Table("user").Dest(&users).Where(Raw("id=")).Select()
+	assert.NotNil(t, err)
+
+	err = dbpool.Table("user").Dest(users).Where(Raw("id=1")).Select()
+	assert.NotNil(t, err)
+}
+
+func TestFetchOne(t *testing.T) {
+
+	var err error
+	dbpool := getPool()
+	user := &user{}
+	dbpool.Table("user").Dest(user).FetchOne()
+
+	err = dbpool.Table("user").Dest(user).Where(Raw("id=")).FetchOne()
+	assert.NotNil(t, err)
 }

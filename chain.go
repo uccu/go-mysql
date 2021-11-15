@@ -4,6 +4,7 @@ import (
 	"github.com/uccu/go-mysql/field"
 	"github.com/uccu/go-mysql/mx"
 	"github.com/uccu/go-mysql/table"
+	"github.com/uccu/go-stringify"
 )
 
 func (v *Orm) Fields(fields []interface{}) *Orm {
@@ -14,8 +15,7 @@ func (v *Orm) Fields(fields []interface{}) *Orm {
 			continue
 		}
 		if k, ok := f.(string); ok {
-			k := transformToKey(k)
-			v.addField(field.NewField(k.Name).SetTable(k.Parent).SetAlias(k.Alias))
+			v.addField(Field(k))
 		}
 	}
 	return v
@@ -61,9 +61,8 @@ func (v *Orm) Table(s ...interface{}) *Orm {
 			continue
 		}
 		if t, ok := t.(string); ok {
-			keys := transformToKeyList(t)
-			for _, k := range keys {
-				v.addTable(table.NewTable(k.Name, v.db.prefix+k.Name).SetSuffix(v.db.suffix).SetAlias(k.Alias).SetDBName(k.Parent))
+			for _, t := range stringify.ToStringSlice(t, ",") {
+				v.addTable(Table(t, v.db.prefix).SetSuffix(v.db.suffix))
 			}
 		}
 	}
