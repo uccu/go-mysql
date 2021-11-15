@@ -134,6 +134,15 @@ func (v *Orm) Alias(n string) *Orm {
 	return v
 }
 
+func (v *Orm) Suffix(i interface{}) *Orm {
+	if len(v.table) > 0 {
+		if t, ok := v.table[0].(*table.Table); ok {
+			t.Suffix(i)
+		}
+	}
+	return v
+}
+
 func (v *Orm) Union(o ...*Orm) *Orm {
 	for _, o := range o {
 		v.addUnion(o.Exec(false))

@@ -1,13 +1,12 @@
 package mysql_test
 
 import (
-	"fmt"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	. "github.com/uccu/go-mysql"
+	"github.com/uccu/go-stringify"
 )
 
 type user struct {
@@ -29,14 +28,23 @@ func getPool() *DB {
 	}
 
 	dbpool.WithErrHandler(func(e error, o *Orm) {
-		log.Println("sql: ", o.Sql, o.GetArgs())
-		log.Println(fmt.Sprintln(e))
+		// log.Println("sql: ", o.Sql, o.GetArgs())
+		// log.Println(fmt.Sprintln(e))
 	})
 	dbpool.WithAfterQueryHandler(func(o *Orm) {
-		log.Println("sql: ", o.Sql, o.GetArgs())
+		// log.Println("sql: ", o.Sql, o.GetArgs())
+	})
+
+	dbpool.WithSuffix(func(i interface{}) string {
+		return "_" + stringify.ToString(stringify.ToInt(i)%3)
 	})
 
 	return dbpool.WithPrefix("b_")
+}
+
+func TestPool(t *testing.T) {
+	_, err := Open("", "")
+	assert.NotNil(t, err)
 }
 
 func TestCount(t *testing.T) {
@@ -48,8 +56,8 @@ func TestCount(t *testing.T) {
 	assert.Equal(t, orm.Sql, "SELECT COUNT(`id`) FROM `b_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
-	orm.Exec(false).Count()
-	assert.Equal(t, orm.Sql, "SELECT COUNT(1) FROM `b_user` LIMIT ?")
+	orm.Exec(false).Suffix(10).Count()
+	assert.Equal(t, orm.Sql, "SELECT COUNT(1) FROM `b_user_1` LIMIT ?")
 }
 
 func TestGetFields(t *testing.T) {
@@ -207,4 +215,24 @@ func TestJoin(t *testing.T) {
 	orm = dbpool.Table("user")
 	orm.Exec(false).Field("user.c").RightJoin("goods", Mix("ON %t=%t", "user.id", "goods.user_id")).Where("user.id", 1).Select()
 	assert.Equal(t, orm.Sql, "SELECT `user`.`c` FROM `b_user` RIGHT JOIN `b_goods` ON `user`.`id`=`goods`.`user_id` WHERE `user`.`id`=?")
+}
+
+func TestResult(t *testing.T) {
+	dbpool := getPool()
+
+	dbpool.Table("user").GetFieldInt("id")
+	dbpool.Table("user").GetFieldString("id")
+	dbpool.Table("user").GetFieldsInt("id")
+	dbpool.Table("user").GetFieldsString("id")
+
+	user := &struct {
+		Id int64 `db:"id"`
+	}{}
+
+	dbpool.Table("user").Dest(user).FetchOne()
+	dbpool.Table("user").Where(Raw("id=0")).Delete()
+	dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=0")).Update()
+	err := dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
+
+	assert.Equal(t, err, ErrNoRows)
 }
