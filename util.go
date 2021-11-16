@@ -319,12 +319,15 @@ func transformToMixs(tagName string, s ...interface{}) (mx.Mixs, error) {
 		} else if rv.Kind() == reflect.Map {
 			mixs = transformMapToMixs(s[0].(map[string]interface{}))
 		}
-	} else {
+	}
+
+	if mixs == nil {
 		if len(s)%2 == 1 {
 			return nil, ErrOddNumberOfParams
 		}
 		mixs = transformSliceToMixs(s...)
 	}
+
 	return mixs, nil
 }
 

@@ -14,8 +14,15 @@ type user struct {
 	Name string `db:"name" dbwhere:"-"`
 }
 
+var db *DB
+
 func getPool() *DB {
-	dbpool, err := Open("mysql", "billiards_test:YkAxFxXLyWhtjraG@tcp(60.205.184.251:3306)/billiards_test?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
+
+	if db != nil {
+		return db
+	}
+
+	dbpool, err := Open("mysql", "test2:53CNrrnY6N6Tk2yr@tcp(60.205.184.251:3306)/test2?charset=utf8mb4&parseTime=true&loc=Asia%2FChongqing")
 	if err != nil {
 		panic(err)
 	}
@@ -39,7 +46,8 @@ func getPool() *DB {
 		return "_" + stringify.ToString(stringify.ToInt(i)%3)
 	})
 
-	return dbpool.WithPrefix("b_")
+	db = dbpool.WithPrefix("t_")
+	return db
 }
 
 func TestPool(t *testing.T) {
@@ -53,40 +61,30 @@ func TestCount(t *testing.T) {
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Count("id")
-	assert.Equal(t, orm.Sql, "SELECT COUNT(`id`) FROM `b_user` LIMIT ?")
+	assert.Equal(t, orm.Sql, "SELECT COUNT(`id`) FROM `t_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Suffix(10).Count()
-	assert.Equal(t, orm.Sql, "SELECT COUNT(1) FROM `b_user_1` LIMIT ?")
-}
+	assert.Equal(t, orm.Sql, "SELECT COUNT(1) FROM `t_user_1` LIMIT ?")
 
-func TestGetFields(t *testing.T) {
-	dbpool := getPool()
-	orm := dbpool.Table("user")
-	orm.Exec(false).GetFields("a")
-	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user`")
-}
-
-func TestGetField(t *testing.T) {
-	dbpool := getPool()
-	orm := dbpool.Table("user")
-	orm.Exec(false).GetField("a")
-	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user` LIMIT ?")
+	orm = dbpool.Table("user")
+	orm.Count()
+	assert.Nil(t, orm.Err())
 }
 
 func TestField(t *testing.T) {
 	dbpool := getPool()
 	orm := dbpool.Table("user")
 	orm.Exec(false).Field("a", "w").FetchOne()
-	assert.Equal(t, orm.Sql, "SELECT `a`, `w` FROM `b_user` LIMIT ?")
+	assert.Equal(t, orm.Sql, "SELECT `a`, `w` FROM `t_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Fields([]interface{}{"a", "b"}).FetchOne()
-	assert.Equal(t, orm.Sql, "SELECT `a`, `b` FROM `b_user` LIMIT ?")
+	assert.Equal(t, orm.Sql, "SELECT `a`, `b` FROM `t_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Dest(user{Id: 1, Name: "name"}).FetchOne()
-	assert.Equal(t, orm.Sql, "SELECT `id`, `name` FROM `b_user` LIMIT ?")
+	assert.Equal(t, orm.Sql, "SELECT `id`, `name` FROM `t_user` LIMIT ?")
 }
 
 func TestQuery(t *testing.T) {
@@ -97,7 +95,7 @@ func TestQuery(t *testing.T) {
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Query("WHERE 1=1").Delete()
-	assert.Equal(t, orm.Sql, "DELETE FROM `b_user` WHERE 1=1")
+	assert.Equal(t, orm.Sql, "DELETE FROM `t_user` WHERE 1=1")
 
 	orm = dbpool.Table()
 	orm.Exec(false).Query("UPDATE bb").Query("SET a=1").Query("WHERE a=?", 1).FetchOne()
@@ -111,15 +109,15 @@ func TestUpdate(t *testing.T) {
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set("a", 1, "b", 3).Where("a", 1).Where("b", 3).Update()
-	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `a`=?, `b`=? WHERE `a`=? AND `b`=?")
+	assert.Equal(t, orm.Sql, "UPDATE `t_user` SET `a`=?, `b`=? WHERE `a`=? AND `b`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(map[string]interface{}{"a": 2}).Where(map[string]interface{}{"a": 2}).Update()
-	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `a`=? WHERE `a`=?")
+	assert.Equal(t, orm.Sql, "UPDATE `t_user` SET `a`=? WHERE `a`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Where(user{Id: 1, Name: "name"}).Update()
-	assert.Equal(t, orm.Sql, "UPDATE `b_user` SET `name`=? WHERE `id`=?")
+	assert.Equal(t, orm.Sql, "UPDATE `t_user` SET `name`=? WHERE `id`=?")
 }
 
 func TestInsert(t *testing.T) {
@@ -128,19 +126,19 @@ func TestInsert(t *testing.T) {
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set("a", 1).Set("b", 3).Insert()
-	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `a`=?, `b`=?")
+	assert.Equal(t, orm.Sql, "INSERT INTO `t_user` SET `a`=?, `b`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(map[string]interface{}{"a": 2}).Insert()
-	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `a`=?")
+	assert.Equal(t, orm.Sql, "INSERT INTO `t_user` SET `a`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Insert()
-	assert.Equal(t, orm.Sql, "INSERT INTO `b_user` SET `name`=?")
+	assert.Equal(t, orm.Sql, "INSERT INTO `t_user` SET `name`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set(user{Id: 1, Name: "name"}).Replace()
-	assert.Equal(t, orm.Sql, "REPLACE INTO `b_user` SET `name`=?")
+	assert.Equal(t, orm.Sql, "REPLACE INTO `t_user` SET `name`=?")
 }
 
 func TestUnion(t *testing.T) {
@@ -149,23 +147,23 @@ func TestUnion(t *testing.T) {
 	orm := dbpool.Table("order")
 	orm2 := dbpool.Table("order2")
 	orm.Union(orm2).Exec(false).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`)")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_order` UNION (SELECT * FROM `t_order2`)")
 
 	orm = dbpool.Table("order")
 	orm.Union().Exec(false).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order`")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_order`")
 
 	orm = dbpool.Table("order")
 	orm2 = dbpool.Table("order2")
 	orm3 := dbpool.Table("order3")
 	orm.Union(orm2).UnionAll(orm3).Exec(false).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`) UNION ALL (SELECT * FROM `b_order3`)")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_order` UNION (SELECT * FROM `t_order2`) UNION ALL (SELECT * FROM `t_order3`)")
 
 	orm = dbpool.Table("order")
 	orm2 = dbpool.Table("order2")
 	orm3 = dbpool.Table("order3")
 	orm.Union(orm2, orm3).Exec(false).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_order` UNION (SELECT * FROM `b_order2`) UNION (SELECT * FROM `b_order3`)")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_order` UNION (SELECT * FROM `t_order2`) UNION (SELECT * FROM `t_order3`)")
 
 }
 
@@ -175,15 +173,15 @@ func TestGroup(t *testing.T) {
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Group("type").Having("a", 1).Having("b", 3).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `a`=? AND `b`=?")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` GROUP BY `type` HAVING `a`=? AND `b`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Group("type").Having(map[string]interface{}{"a": 2}).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `a`=?")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` GROUP BY `type` HAVING `a`=?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Group("type").Having(user{Id: 1, Name: "name"}).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` GROUP BY `type` HAVING `id`=?")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` GROUP BY `type` HAVING `id`=?")
 }
 
 func TestChain(t *testing.T) {
@@ -192,15 +190,15 @@ func TestChain(t *testing.T) {
 
 	orm = dbpool.Table()
 	orm.Exec(false).Field("a").Table("user").Alias("u").Order("id desc").Limit(1, 2).Select()
-	assert.Equal(t, orm.Sql, "SELECT `a` FROM `b_user` ORDER BY `id` DESC LIMIT ?,?")
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `t_user` ORDER BY `id` DESC LIMIT ?,?")
 
 	orm = dbpool.Table()
 	orm.Exec(false).Field("e.a vv").Table("user u").Alias("u1").Table("level e").Order("u.id").Page(1, 2).Select()
-	assert.Equal(t, orm.Sql, "SELECT `e`.`a` `vv` FROM `b_user` `u1`, `b_level` `e` ORDER BY `u`.`id` LIMIT ?,?")
+	assert.Equal(t, orm.Sql, "SELECT `e`.`a` `vv` FROM `t_user` `u1`, `t_level` `e` ORDER BY `u`.`id` LIMIT ?,?")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Page(0, 2).Select()
-	assert.Equal(t, orm.Sql, "SELECT * FROM `b_user` LIMIT ?,?")
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` LIMIT ?,?")
 
 }
 
@@ -213,15 +211,72 @@ func TestJoin(t *testing.T) {
 	assert.Equal(t, orm.Err(), ErrNoTable)
 
 	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
-	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `b_user` `a` LEFT JOIN `b_user` `b` ON a.id=b.id")
+	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `t_user` `a` LEFT JOIN `t_user` `b` ON a.id=b.id")
 
 	orm = dbpool.Table()
 	orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
-	assert.Equal(t, orm.Sql, "SELECT `b`.`c` FROM `b_user` `a` RIGHT JOIN `b_user` `b` ON `a`.`id`=`b`.`id`")
+	assert.Equal(t, orm.Sql, "SELECT `b`.`c` FROM `t_user` `a` RIGHT JOIN `t_user` `b` ON `a`.`id`=`b`.`id`")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Field("user.c").RightJoin("goods", Mix("ON %t=%t", "user.id", "goods.user_id")).Where("user.id", 1).Select()
-	assert.Equal(t, orm.Sql, "SELECT `user`.`c` FROM `b_user` RIGHT JOIN `b_goods` ON `user`.`id`=`goods`.`user_id` WHERE `user`.`id`=?")
+	assert.Equal(t, orm.Sql, "SELECT `user`.`c` FROM `t_user` RIGHT JOIN `t_goods` ON `user`.`id`=`goods`.`user_id` WHERE `user`.`id`=?")
+
+	orm = dbpool.Table("user u")
+	orm.Exec(false).Join(Table("user_goods g"), Mix("ON %t=%t", Field("u.id"), Field("g.user_id"))).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` `u` JOIN `user_goods` `g` ON `u`.`id`=`g`.`user_id`")
+
+	orm = dbpool.Table("user").Join(map[string]int{})
+	assert.Equal(t, orm.Err(), ErrNoContainer)
+
+	orm = dbpool.Table("user").Join("goods", "user.id")
+	assert.Equal(t, orm.Err(), ErrOddNumberOfParams)
+
+}
+
+func TestGetField(t *testing.T) {
+
+	var err error
+	dbpool := getPool()
+	var data int
+
+	orm := dbpool.Table("user")
+	orm.Exec(false).GetFields("a")
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `t_user`")
+
+	dbpool.Table("user").Exec(false).GetFieldInt("id")
+	dbpool.Table("user").GetFieldString("id")
+
+	err = dbpool.Table("user").Dest(data).GetField("id")
+	assert.NotNil(t, err)
+
+	err = dbpool.Table("user").Dest(&data).GetField("id-")
+	assert.NotNil(t, err)
+
+}
+
+func TestGetFields(t *testing.T) {
+
+	var err error
+	dbpool := getPool()
+	data := []int{}
+	data2 := []*int{}
+
+	orm := dbpool.Table("user")
+	orm.Exec(false).GetField("a")
+	assert.Equal(t, orm.Sql, "SELECT `a` FROM `t_user` LIMIT ?")
+
+	dbpool.Table("user").Exec(false).GetFieldsInt("id")
+	dbpool.Table("user").GetFieldsString("id")
+
+	err = dbpool.Table("user").Dest(data).GetFields("id")
+	assert.NotNil(t, err)
+
+	err = dbpool.Table("user").Dest(&data).GetFields("id-")
+	assert.NotNil(t, err)
+
+	err = dbpool.Table("user").Dest(&data2).GetFields("id")
+	assert.Nil(t, err)
+
 }
 
 func TestResult(t *testing.T) {
@@ -229,30 +284,45 @@ func TestResult(t *testing.T) {
 	var err error
 	dbpool := getPool()
 
-	dbpool.Table("user").GetFieldInt("id")
-	dbpool.Table("user").GetFieldString("id")
-	dbpool.Table("user").GetFieldsInt("id")
-	dbpool.Table("user").GetFieldsString("id")
 	dbpool.Table("user").Exec(false).Sum("id")
 	dbpool.Table("user").Exec(false).SumFloat("id")
 	dbpool.Table("user").Exec(false).Exist()
 
 	user := &user{}
 
-	_, err = dbpool.Table("user").Where(Raw("id=")).Delete()
+	_, err = dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=")).Update()
 	assert.NotNil(t, err)
 
-	dbpool.Table("user").Where(Raw("id=0")).Delete()
-	dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=0")).Update()
-	err = dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
+	_, err = dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=0")).Update()
+	assert.Nil(t, err)
 
+	err = dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
 	assert.Equal(t, err, ErrNoRows)
+}
+
+type user2 struct {
+	Id   int64
+	Name string
+}
+
+type user3 struct {
+	Id int64 `json:"id"`
+	user4
+}
+
+type user4 struct {
+	Name string `json:"name"`
 }
 
 func TestSelect(t *testing.T) {
 
 	var err error
+	var id int64
 	dbpool := getPool()
+
+	id, err = dbpool.Table("user").Set("name", "123").Insert()
+	assert.Nil(t, err)
+
 	users := []*user{}
 	err = dbpool.Table("user").Dest(&users).Where(Raw("id>0")).Limit(1).Select()
 	assert.Nil(t, err)
@@ -262,15 +332,23 @@ func TestSelect(t *testing.T) {
 
 	err = dbpool.Table("user").Dest(users).Where(Raw("id=1")).Select()
 	assert.NotNil(t, err)
-}
 
-func TestFetchOne(t *testing.T) {
+	u1 := &user{}
+	err = dbpool.Table("user").Dest(u1).FetchOne()
+	assert.Nil(t, err)
 
-	var err error
-	dbpool := getPool()
-	user := &user{}
-	dbpool.Table("user").Dest(user).FetchOne()
-
-	err = dbpool.Table("user").Dest(user).Where(Raw("id=")).FetchOne()
+	err = dbpool.Table("user").Dest(u1).Where(Raw("id=")).FetchOne()
 	assert.NotNil(t, err)
+
+	u2 := &user2{}
+	err = dbpool.Table("user").Dest(u2).Where("id", id).FetchOne()
+	assert.Nil(t, err)
+
+	u3 := &user3{}
+	err = dbpool.Table("user").Dest(u3).Where("id", id).FetchOne()
+	assert.Nil(t, err)
+
+	_, err = dbpool.Table("user").Where("id", id).Delete()
+	assert.Nil(t, err)
+
 }
