@@ -348,6 +348,10 @@ func TestSelect(t *testing.T) {
 	err = dbpool.Table("user").Dest(u3).Where("id", id).FetchOne()
 	assert.Nil(t, err)
 
+	mp := []map[string]string{}
+	err = dbpool.Table("user").Dest(&mp).Where("id", id).Select()
+	assert.Nil(t, err)
+
 	_, err = dbpool.Table("user").Where("id", id).Delete()
 	assert.Nil(t, err)
 
