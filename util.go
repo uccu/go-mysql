@@ -20,6 +20,7 @@ var (
 	ErrNotMap                = errors.New("not pass a map")
 	ErrNotStringMapKey       = errors.New("not pass a string key of map")
 	ErrNotStruct             = errors.New("not pass a struct")
+	ErrNotStructOrMap        = errors.New("not pass a struct or map")
 	ErrNotStructInSlice      = errors.New("not pass a struct in slice")
 	ErrNotStructOrMapInSlice = errors.New("not pass a struct or map in slice")
 	ErrNilPointer            = errors.New("pass a nil pointer")
@@ -50,9 +51,16 @@ type column struct {
 	Dest interface{}
 }
 
+func prtGetElem(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	return v
+}
+
 func scanSlice(dest interface{}, rows *sql.Rows) error {
 
-	value, err := getSlice(dest)
+	value, err := getReflectSliceValue(dest)
 	if err != nil {
 		return err
 	}
@@ -70,14 +78,16 @@ func scanSlice(dest interface{}, rows *sql.Rows) error {
 
 	for rows.Next() {
 		r := reflect.New(base)
-		rv := stringify.GetReflectValue(r)
+		rv := prtGetElem(r)
 
 		if base.Kind() == reflect.Map {
 			list, err := generateMapToScanData(rv, len(columns))
 			if err != nil {
 				return err
 			}
-			// todo
+
+			rows.Scan(list...)
+
 			for k := range columns {
 				key := reflect.ValueOf(&columns[k]).Elem()
 				rv.SetMapIndex(key, reflect.ValueOf(list[k]).Elem())
@@ -103,8 +113,13 @@ func generateMapToScanData(r reflect.Value, length int) ([]interface{}, error) {
 		return nil, ErrNotMap
 	}
 
-	k := r.Type().Key()
-	v := r.Type().Elem()
+	typ := r.Type()
+	if r.IsNil() {
+		r.Set(reflect.MakeMap(typ))
+	}
+
+	k := typ.Key()
+	v := typ.Elem()
 
 	if k.Kind() != reflect.String {
 		return nil, ErrNotStringMapKey
@@ -126,10 +141,10 @@ func scanOne(dest interface{}, rows *sql.Rows) error {
 		return ErrNotPointer
 	}
 
-	value = stringify.GetReflectValue(value)
+	value = prtGetElem(value)
 
-	if value.Kind() != reflect.Struct {
-		return ErrNotStruct
+	if value.Kind() != reflect.Struct && value.Kind() != reflect.Map {
+		return ErrNotStructOrMap
 	}
 
 	columns, err := rows.Columns()
@@ -140,7 +155,24 @@ func scanOne(dest interface{}, rows *sql.Rows) error {
 	if !rows.Next() {
 		return ErrNoRows
 	}
-	rows.Scan(generateScanData(value, columns)...)
+
+	if value.Kind() == reflect.Map {
+		list, err := generateMapToScanData(value, len(columns))
+		if err != nil {
+			return err
+		}
+
+		rows.Scan(list...)
+
+		for k := range columns {
+			key := reflect.ValueOf(&columns[k]).Elem()
+			value.SetMapIndex(key, reflect.ValueOf(list[k]).Elem())
+		}
+
+	} else {
+		rows.Scan(generateScanData(value, columns)...)
+	}
+
 	return nil
 }
 
@@ -172,21 +204,17 @@ func generateScanData(rv reflect.Value, columns []string) []interface{} {
 	return s
 }
 
-func getSlice(dest interface{}) (reflect.Value, error) {
+func getReflectSliceValue(dest interface{}) (reflect.Value, error) {
+
 	value := reflect.ValueOf(dest)
-
-	if value.Kind() != reflect.Ptr {
-		return reflect.Value{}, ErrNotPointer
-	}
-
-	value = stringify.GetReflectValue(value)
+	value = prtGetElem(value)
 
 	if value.Kind() != reflect.Slice {
 		return reflect.Value{}, ErrNotSlice
 	}
 
 	if value.IsNil() {
-		return reflect.Value{}, ErrNilPointer
+		value.Set(reflect.MakeSlice(value.Type(), 0, 0))
 	}
 
 	return value, nil
@@ -199,7 +227,7 @@ func getSliceBase(value reflect.Value) (base reflect.Type, isPtr bool) {
 	isPtr = base.Kind() == reflect.Ptr
 	if isPtr {
 		base = base.Elem()
-	}
+	} 
 	return
 }
 

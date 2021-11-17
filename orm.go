@@ -67,11 +67,6 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 	return v
 }
 
-func (v *Orm) Dest(dest interface{}) *Orm {
-	v.dest = dest
-	return v
-}
-
 func (v *Orm) addField(field mx.Field) *Orm {
 	if v.fields == nil {
 		v.fields = make(mx.Fields, 0)
