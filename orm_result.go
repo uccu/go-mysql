@@ -194,7 +194,7 @@ func (v *Orm) GetFields(name string) error {
 	defer rows.Close()
 	v.afterQuery()
 
-	value, err := getSlice(v.dest)
+	value, err := getReflectSliceValue(v.dest)
 	if err != nil {
 		v.setErr(err)
 		return err
@@ -202,16 +202,14 @@ func (v *Orm) GetFields(name string) error {
 	base, isPtr := getSliceBase(value)
 
 	for rows.Next() {
-		b := reflect.New(base)
-		bv := stringify.GetReflectValue(b)
-		if bv.CanAddr() && bv.CanInterface() {
-			rows.Scan(bv.Addr().Interface())
+		b := reflect.New(base).Elem()
+		if b.CanAddr() && b.CanInterface() {
+			rows.Scan(b.Addr().Interface())
 		}
 		if isPtr {
-			value.Set(reflect.Append(value, b))
-		} else {
-			value.Set(reflect.Append(value, bv))
+			b = b.Addr()
 		}
+		value.Set(reflect.Append(value, b))
 	}
 
 	return nil

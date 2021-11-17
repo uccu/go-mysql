@@ -83,7 +83,7 @@ func TestField(t *testing.T) {
 	assert.Equal(t, orm.Sql, "SELECT `a`, `b` FROM `t_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
-	orm.Exec(false).Dest(user{Id: 1, Name: "name"}).FetchOne()
+	orm.Exec(false).Dest(&user{Id: 1, Name: "name"}).FetchOne()
 	assert.Equal(t, orm.Sql, "SELECT `id`, `name` FROM `t_user` LIMIT ?")
 }
 
@@ -202,6 +202,10 @@ func TestChain(t *testing.T) {
 
 }
 
+type userj struct {
+	Id int64 `db:"a.id"`
+}
+
 func TestJoin(t *testing.T) {
 	dbpool := getPool()
 	var orm *Orm
@@ -212,6 +216,10 @@ func TestJoin(t *testing.T) {
 
 	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
 	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `t_user` `a` LEFT JOIN `t_user` `b` ON a.id=b.id")
+
+	orm = dbpool.Table()
+	orm.Exec(false).Dest(&userj{}).Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
+	assert.Equal(t, orm.Sql, "SELECT `a`.`id` FROM `t_user` `a` LEFT JOIN `t_user` `b` ON a.id=b.id")
 
 	orm = dbpool.Table()
 	orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
@@ -348,7 +356,29 @@ func TestSelect(t *testing.T) {
 	err = dbpool.Table("user").Dest(u3).Where("id", id).FetchOne()
 	assert.Nil(t, err)
 
+	var mp1 map[string]string
+	err = dbpool.Table("user").Dest(&mp1).Where("id", id).FetchOne()
+	assert.Nil(t, err)
+
+	mp2 := map[string]string{}
+	err = dbpool.Table("user").Dest(&mp2).Where("id", id).FetchOne()
+	assert.Nil(t, err)
+
+	mp := []map[string]string{}
+	err = dbpool.Table("user").Dest(&mp).Where("id", id).Select()
+	assert.Nil(t, err)
+
+	var mp3 []map[string]string
+	err = dbpool.Table("user").Dest(&mp3).Where("id", id).Select()
+	assert.Nil(t, err)
+
 	_, err = dbpool.Table("user").Where("id", id).Delete()
 	assert.Nil(t, err)
 
+}
+
+func TestUtil(t *testing.T) {
+	dbpool := getPool()
+	orm := dbpool.Table("user").Dest("123")
+	assert.Equal(t, orm.Err(), ErrNotPointer)
 }

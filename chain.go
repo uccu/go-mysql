@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"reflect"
+
 	"github.com/uccu/go-mysql/field"
 	"github.com/uccu/go-mysql/mx"
 	"github.com/uccu/go-mysql/table"
@@ -159,5 +161,13 @@ func (v *Orm) UnionAll(o ...*Orm) *Orm {
 
 func (v *Orm) Exec(e bool) *Orm {
 	v.b = !e
+	return v
+}
+
+func (v *Orm) Dest(dest interface{}) *Orm {
+	if reflect.TypeOf(dest).Kind() != reflect.Ptr {
+		return v.setErr(ErrNotPointer)
+	}
+	v.dest = dest
 	return v
 }
