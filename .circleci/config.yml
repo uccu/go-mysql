@@ -11,6 +11,8 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
       - image: circleci/golang:1.17
+    environment:
+      CODECOV_TOKEN: 29e9c842-9b7f-4887-a2b9-77b9306bac36
     # Add steps to the job
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
@@ -20,7 +22,9 @@ jobs:
             - go-mod-v4-{{ checksum "go.sum" }}
       - run:
           name: Install Dependencies
-          command: go mod download
+          command: |
+            go mod download
+            go test -race -coverprofile=coverage.txt -covermode=atomic
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
@@ -28,6 +32,7 @@ jobs:
       - run:
           name: Run tests
           command: |
+            bash <(curl -s https://codecov.io/bash)
             mkdir -p /tmp/test-reports
             gotestsum --junitfile /tmp/test-reports/unit-tests.xml
       - store_test_results:
@@ -36,7 +41,7 @@ jobs:
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
-  sample: # This is the name of the workflow, feel free to change it to better match your workflow.
+  master: # This is the name of the workflow, feel free to change it to better match your workflow.
     # Inside the workflow, you define the jobs you want to run.
     jobs:
       - build
