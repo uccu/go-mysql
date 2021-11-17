@@ -108,7 +108,11 @@ func TestUpdate(t *testing.T) {
 	var orm *Orm
 
 	orm = dbpool.Table("user")
-	orm.Exec(false).Set("a", 1, "b", 3).Where("a", 1).Where("b", 3).Update()
+	orm.Exec(false).Set("a")
+	assert.Equal(t, orm.Err(), ErrOddNumberOfParams)
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set().Set("a", 1, "b", 3).Where("a", 1).Where("b", 3).Update()
 	assert.Equal(t, orm.Sql, "UPDATE `t_user` SET `a`=?, `b`=? WHERE `a`=? AND `b`=?")
 
 	orm = dbpool.Table("user")
@@ -232,6 +236,10 @@ func TestJoin(t *testing.T) {
 	orm = dbpool.Table("user u")
 	orm.Exec(false).Join(Table("user_goods g"), Mix("ON %t=%t", Field("u.id"), Field("g.user_id"))).Select()
 	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` `u` JOIN `user_goods` `g` ON `u`.`id`=`g`.`user_id`")
+
+	orm = dbpool.Table(Table("user u1"))
+	orm.Exec(false).Table("user u2").Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `user` `u1`, `t_user` `u2`")
 
 	orm = dbpool.Table("user").Join(map[string]int{})
 	assert.Equal(t, orm.Err(), ErrNoContainer)
