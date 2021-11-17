@@ -265,3 +265,29 @@ user := &struct{
 }{}
 db.Table("user").Where("id", 2).Dest(user).FetchOne()
 ```
+
+#### 2.4 事务处理
+
+##### 2.4.1 创建事务
+```go
+tx := dbpool.Start()
+```
+
+##### 2.4.2 回滚
+```go
+tx := dbpool.Start()
+id, err = tx.Table("user").Set("name", "123").Insert()
+if false {
+    tx.Rollback()
+}
+```
+
+##### 2.4.3 提交
+```go
+tx := dbpool.Start()
+id, err = tx.Table("user").Set("name", "123").Insert()
+if true {
+    tx.Commit()
+}
+```
+
