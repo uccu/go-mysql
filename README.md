@@ -1,4 +1,6 @@
+[![CircleCI](https://circleci.com/gh/uccu/go-mysql/tree/master.svg?style=svg)](https://circleci.com/gh/uccu/go-mysql/tree/master)
 [![Maintainability](https://api.codeclimate.com/v1/badges/d36b2d73f54d02d99076/maintainability)](https://codeclimate.com/github/uccu/go-mysql/maintainability)
+[![codecov](https://codecov.io/gh/uccu/go-mysql/branch/master/graph/badge.svg?token=NFBBXRMOEO)](https://codecov.io/gh/uccu/go-mysql)
 [![GitHub issues](https://img.shields.io/github/issues/uccu/go-mysql)](https://github.com/uccu/go-mysql/issues)
 ![GitHub](https://img.shields.io/github/license/uccu/go-mysql)
 
