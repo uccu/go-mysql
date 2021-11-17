@@ -8,6 +8,8 @@ import (
 
 type DB struct {
 	*sql.DB
+	q                 Query
+	tx                *sql.Tx
 	prefix            string
 	suffix            func(interface{}) string
 	errHandler        func(error, *Orm)
@@ -42,10 +44,39 @@ func (db *DB) WithAfterQueryHandler(p func(*Orm)) *DB {
 	return db
 }
 
+func (db *DB) Start() *DB {
+
+	q := db.q
+	tx, err := db.Begin()
+	if err == nil {
+		q = tx
+	}
+
+	return &DB{
+		DB:                db.DB,
+		q:                 q,
+		tx:                tx,
+		prefix:            db.prefix,
+		suffix:            db.suffix,
+		errHandler:        db.errHandler,
+		afterQueryHandler: db.afterQueryHandler,
+	}
+}
+
+func (db *DB) Rollback() (err error) {
+	err = db.tx.Rollback()
+	return
+}
+
+func (db *DB) Commit() (err error) {
+	err = db.tx.Commit()
+	return
+}
+
 func Open(driverName, dataSourceName string) (*DB, error) {
 	d, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	return &DB{DB: d}, nil
+	return &DB{DB: d, q: d}, nil
 }

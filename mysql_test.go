@@ -382,3 +382,31 @@ func TestUtil(t *testing.T) {
 	orm := dbpool.Table("user").Dest("123")
 	assert.Equal(t, orm.Err(), ErrNotPointer)
 }
+
+func TestTx(t *testing.T) {
+
+	var err error
+	var id int64
+	dbpool := getPool()
+
+	tx := dbpool.Start()
+	assert.Nil(t, err)
+
+	id, err = tx.Table("user").Set("name", "123").Insert()
+	assert.Nil(t, err)
+	assert.True(t, tx.Table("user").Where("id", id).Exist())
+	tx.Rollback()
+
+	assert.False(t, dbpool.Table("user").Where("id", id).Exist())
+
+	tx = dbpool.Start()
+	assert.Nil(t, err)
+	id, err = tx.Table("user").Set("name", "123").Insert()
+	assert.Nil(t, err)
+	tx.Commit()
+	assert.True(t, dbpool.Table("user").Where("id", id).Exist())
+
+	_, err = dbpool.Table("user").Where("id", id).Delete()
+	assert.Nil(t, err)
+
+}

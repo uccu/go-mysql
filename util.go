@@ -51,6 +51,12 @@ type column struct {
 	Dest interface{}
 }
 
+type Query interface {
+	Query(string, ...interface{}) (*sql.Rows, error)
+	Exec(string, ...interface{}) (sql.Result, error)
+	QueryRow(string, ...interface{}) *sql.Row
+}
+
 func prtGetElem(v reflect.Value) reflect.Value {
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -227,7 +233,7 @@ func getSliceBase(value reflect.Value) (base reflect.Type, isPtr bool) {
 	isPtr = base.Kind() == reflect.Ptr
 	if isPtr {
 		base = base.Elem()
-	} 
+	}
 	return
 }
 

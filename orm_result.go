@@ -59,7 +59,7 @@ func (v *Orm) Select() error {
 		return nil
 	}
 
-	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
+	rows, err := v.db.q.Query(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
 		return err
@@ -88,7 +88,7 @@ func (v *Orm) FetchOne() error {
 		return nil
 	}
 
-	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
+	rows, err := v.db.q.Query(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
 		return err
@@ -114,7 +114,7 @@ func (v *Orm) exec(s sqlType, r resultType) (int64, error) {
 		return 0, nil
 	}
 
-	result, err := v.db.Exec(v.Sql, v.GetArgs()...)
+	result, err := v.db.q.Exec(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
 		return 0, err
@@ -159,7 +159,7 @@ func (v *Orm) GetField(name interface{}) error {
 		return nil
 	}
 
-	row := v.db.QueryRow(v.Sql, v.GetArgs()...)
+	row := v.db.q.QueryRow(v.Sql, v.GetArgs()...)
 	if row.Err() != nil {
 		v.setErr(row.Err())
 		return row.Err()
@@ -186,7 +186,7 @@ func (v *Orm) GetFields(name string) error {
 		return nil
 	}
 
-	rows, err := v.db.Query(v.Sql, v.GetArgs()...)
+	rows, err := v.db.q.Query(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
 		return err
