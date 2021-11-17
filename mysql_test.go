@@ -202,6 +202,10 @@ func TestChain(t *testing.T) {
 
 }
 
+type userj struct {
+	Id int64 `db:"a.id"`
+}
+
 func TestJoin(t *testing.T) {
 	dbpool := getPool()
 	var orm *Orm
@@ -212,6 +216,10 @@ func TestJoin(t *testing.T) {
 
 	orm.Exec(false).Field("a.a").Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
 	assert.Equal(t, orm.Sql, "SELECT `a`.`a` FROM `t_user` `a` LEFT JOIN `t_user` `b` ON a.id=b.id")
+
+	orm = dbpool.Table()
+	orm.Exec(false).Dest(&userj{}).Table("user").Alias("a").LeftJoin("user b", Raw("ON a.id=b.id")).Select()
+	assert.Equal(t, orm.Sql, "SELECT `a`.`id` FROM `t_user` `a` LEFT JOIN `t_user` `b` ON a.id=b.id")
 
 	orm = dbpool.Table()
 	orm.Exec(false).Field("b.c").Table("user a").RightJoin("user b", Mix("ON %t=%t", Field("a.id"), Field("b.id"))).Select()
