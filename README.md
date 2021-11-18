@@ -8,6 +8,7 @@
 
 本项目是基于[github.com/go-sql-driver/mysql ](http://github.com/go-sql-driver/mysql)开发，扩展了链式查询的工具。
 
+
 ### 1 连接数据库
 
 ```go
@@ -16,6 +17,38 @@ if err != nil {
     panic(err)
 }
 ```
+#### 快速启动
+```go
+
+type User struct{
+    Id      int `db:"id" dbset:"-"`
+    Name    string `db:"name" dbwhere:"-"`
+}
+
+db.WithPrefix("t_")
+
+var user User
+db.Table("user").Where("id", 2).Dest(&user).FetchOne()
+// sql: SELECT `id`, `name` FROM `t_user` WHERE `id`=? LIMIT ?
+// args: [2, 1]
+
+var users []*User
+db.Table("user").Where("id", 2).Dest(&users).Page(2, 10).Select()
+// sql: SELECT `id`, `name` FROM `t_user` WHERE `id`=?
+// args: [2, 10, 10]
+
+user2 := &User{
+    Id: 2,
+    Name: "kitty",
+}
+db.Table("user").Set(user2).Where(user2).Update()
+// Set和Where务必按照顺序排列，不可颠倒
+// sql: UPDATE `t_user` SET `name`=? WHERE `id`=?
+// args: ["kitty", 2]
+```
+
+
+
 
 #### 1.1 配置
 所有go-sql-driver/mysql的配置基本都能兼容，如
