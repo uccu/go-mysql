@@ -466,10 +466,7 @@ func Mix(q string, f ...interface{}) *mix.Mix {
 				args = append(args, r.Index(i).Interface())
 			}
 
-			return s
-		}
-
-		if v, ok := f[k].(mx.Mix); ok {
+		} else if v, ok := f[k].(mx.Mix); ok {
 			mixs = append(mixs, v)
 			args = append(args, v.GetArgs()...)
 		} else if v, ok := f[k].(string); ok {
