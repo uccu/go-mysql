@@ -1,6 +1,8 @@
 package mysql_test
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -361,6 +363,14 @@ func TestSelect(t *testing.T) {
 	id, err = dbpool.Table("user").Set("name", "123").Insert()
 	assert.Nil(t, err)
 
+	orm := dbpool.Table("user")
+	orm.Exec(false).Where(Mix("%t IN (?)", "id", []string{"1", "2"})).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` WHERE `id` IN (?, ?)")
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Where(Mix("%t IN (?)", "id", []string{})).Select()
+	assert.Equal(t, orm.Sql, "SELECT * FROM `t_user` WHERE `id` IN (NULL)")
+
 	users := []*user{}
 	err = dbpool.Table("user").Dest(&users).Where(Raw("id>0")).Limit(1).Select()
 	assert.Nil(t, err)
@@ -484,4 +494,21 @@ func TestScan(t *testing.T) {
 	err = dbpool.Table("user").Dest(&dest7).FetchOne()
 	assert.Nil(t, err)
 	assert.NotNil(t, dest7.User7)
+}
+
+func TestScan2(t *testing.T) {
+
+	q := "id IN (?)"
+	r := regexp.MustCompile(`(?i)%t|\?`)
+	loc := r.ReplaceAllStringFunc(q, func(s string) string {
+
+		if s == "?" {
+			return "1,2,3"
+		}
+
+		return s
+	})
+
+	fmt.Println(loc)
+
 }

@@ -439,26 +439,48 @@ func RawField(f string) *field.RawField {
 
 func Mix(q string, f ...interface{}) *mix.Mix {
 	r := regexp.MustCompile(`(?i)%t|\?`)
-	loc := r.FindAllStringIndex(q, -1)
 
-	k := 0
+	k := -1
 	mixs := mx.Mixs{}
 	args := []interface{}{}
 
-	for _, si := range loc {
-		if q[si[0]:si[1]] == "%t" {
-			if v, ok := f[k].(mx.Mix); ok {
-				mixs = append(mixs, v)
-				args = append(args, v.GetArgs()...)
-			} else if v, ok := f[k].(string); ok {
-				mixs = append(mixs, Field(v))
-			} else {
-				mixs = append(mixs, Raw("NULL"))
-			}
-		} else {
-			args = append(args, f[k])
-		}
+	q = r.ReplaceAllStringFunc(q, func(s string) string {
+
 		k++
-	}
+
+		if s == "?" {
+			r := stringify.GetReflectValue(f[k])
+			if r.Kind() != reflect.Slice {
+				args = append(args, f[k])
+				return s
+			}
+
+			if r.Len() == 0 {
+				return "NULL"
+			}
+
+			for i := 0; i < r.Len(); i++ {
+				if i != 0 {
+					s += ", ?"
+				}
+				args = append(args, r.Index(i).Interface())
+			}
+
+			return s
+		}
+
+		if v, ok := f[k].(mx.Mix); ok {
+			mixs = append(mixs, v)
+			args = append(args, v.GetArgs()...)
+		} else if v, ok := f[k].(string); ok {
+			mixs = append(mixs, Field(v))
+		} else {
+			mixs = append(mixs, Raw("NULL"))
+		}
+
+		return s
+
+	})
+
 	return mix.NewMix(q, mixs, args)
 }
