@@ -33,34 +33,42 @@ func (v *Orm) addMix(m mx.Mix, typs ...string) *Orm {
 		v.mix = make(mx.Mixs, 0)
 	}
 
-	if len(typs) > 0 {
-		typ := typs[0]
+	if len(typs) == 0 {
+		v.mixType = ""
+		v.mix = append(v.mix, m)
+		return v
+	}
 
-		if typ == "group" {
-			v.mix = append(v.mix, Raw(" GROUP BY "))
-		} else if typ == "limit" {
-			v.mix = append(v.mix, Raw(" LIMIT "))
-		} else if typ == "order" {
-			v.mix = append(v.mix, Raw(" ORDER BY "))
-		} else if v.mixType == typ {
-			switch typ {
-			case "where", "having":
-				v.mix = append(v.mix, Raw(" AND "))
-			case "set":
-				v.mix = append(v.mix, Raw(", "))
-			}
-		} else {
-			switch typ {
-			case "where":
-				v.mix = append(v.mix, Raw(" WHERE "))
-			case "having":
-				v.mix = append(v.mix, Raw(" HAVING "))
-			case "set":
-				v.mix = append(v.mix, Raw(" SET "))
-			}
+	typ := typs[0]
+	var ms mx.Mix
+
+	switch typ {
+	case "group":
+		ms = Raw(" GROUP BY ")
+	case "limit":
+		ms = Raw(" LIMIT ")
+	case "order":
+		ms = Raw(" ORDER BY ")
+	case "where":
+		ms = Raw(" WHERE ")
+	case "having":
+		ms = Raw(" HAVING ")
+	case "set":
+		ms = Raw(" SET ")
+	}
+
+	if v.mixType == typ {
+		switch typ {
+		case "where", "having":
+			ms = Raw(" AND ")
+		case "set":
+			ms = Raw(", ")
 		}
+	}
 
+	if ms != nil {
 		v.mixType = typ
+		v.mix = append(v.mix, ms)
 	}
 
 	v.mix = append(v.mix, m)

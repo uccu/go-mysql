@@ -31,17 +31,7 @@ func (f *Field) SetTable(n string) *Field {
 }
 
 func (t *Field) GetName() string {
-	alias := t.Alias
-	if t.Alias == "" {
-		alias = t.Name
-	}
-	if t.with.IsWithBackquote() {
-		alias = "`" + alias + "`"
-	}
-	if !t.with.IsQuery() {
-		t.with.Reset()
-	}
-	return alias
+	return mx.GetName(t.Alias, t.Name, &t.with)
 }
 
 func (f *Field) GetQuery() string {

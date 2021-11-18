@@ -28,17 +28,7 @@ func (t *Table) With(w mx.With) {
 }
 
 func (t *Table) GetName() string {
-	alias := t.Alias
-	if t.Alias == "" {
-		alias = t.RawName
-	}
-	if t.with.IsWithBackquote() {
-		alias = "`" + alias + "`"
-	}
-	if !t.with.IsQuery() {
-		t.with.Reset()
-	}
-	return alias
+	return mx.GetName(t.Alias, t.RawName, &t.with)
 }
 
 func (t *Table) Suffix(s interface{}) {

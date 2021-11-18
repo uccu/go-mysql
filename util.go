@@ -138,15 +138,9 @@ func scanFields(dest interface{}, rows rows) error {
 	return nil
 }
 
-func scanRow(rv reflect.Value, rs scan, columns []string) error {
+func checkMap(rv reflect.Value) error {
 
 	rvt := rv.Type()
-
-	if rvt.Kind() == reflect.Struct {
-		rs.Scan(generateScanData(rv, columns)...)
-		return nil
-	}
-
 	if rvt.Kind() != reflect.Map {
 		return ErrNotStructOrMap
 	}
@@ -156,9 +150,23 @@ func scanRow(rv reflect.Value, rs scan, columns []string) error {
 		return ErrNotStringMapKey
 	}
 
+	return nil
+}
+
+func scanRow(rv reflect.Value, rs scan, columns []string) error {
+
+	if rv.Kind() == reflect.Struct {
+		rs.Scan(generateScanData(rv, columns)...)
+		return nil
+	}
+
+	if err := checkMap(rv); err != nil {
+		return err
+	}
+
 	data := make([]interface{}, 0)
 	for i := 0; i < len(columns); i++ {
-		data = append(data, reflect.New(rvt.Elem()).Interface())
+		data = append(data, reflect.New(rv.Type().Elem()).Interface())
 	}
 
 	if err := rs.Scan(data...); err != nil {
