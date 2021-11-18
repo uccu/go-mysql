@@ -8,7 +8,7 @@ import (
 
 type DB struct {
 	*sql.DB
-	q                 Query
+	q                 query
 	tx                *sql.Tx
 	prefix            string
 	suffix            func(interface{}) string

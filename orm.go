@@ -120,10 +120,16 @@ func (v *Orm) Err() error {
 }
 
 func (v *Orm) setErr(e error) *Orm {
+
+	if v.err != nil {
+		return v
+	}
+
 	v.err = e
 	if v.db.errHandler != nil {
 		v.db.errHandler(e, v)
 	}
+
 	return v
 }
 

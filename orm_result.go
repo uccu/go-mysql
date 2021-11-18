@@ -1,7 +1,6 @@
 package mysql
 
 import (
-	"reflect"
 	"time"
 
 	"github.com/uccu/go-mysql/field"
@@ -159,21 +158,20 @@ func (v *Orm) GetField(name interface{}) error {
 		return nil
 	}
 
-	row := v.db.q.QueryRow(v.Sql, v.GetArgs()...)
-	if row.Err() != nil {
-		v.setErr(row.Err())
-		return row.Err()
-	}
-
-	v.afterQuery()
-
-	err := row.Scan(v.dest)
+	rows, err := v.db.q.Query(v.Sql, v.GetArgs()...)
 	if err != nil {
 		v.setErr(err)
 		return err
 	}
+	defer rows.Close()
+	v.afterQuery()
 
-	return nil
+	err = scanField(v.dest, rows)
+	if err != nil {
+		v.setErr(err)
+	}
+
+	return err
 }
 
 // 获取单个字段的值的slice
@@ -194,25 +192,12 @@ func (v *Orm) GetFields(name string) error {
 	defer rows.Close()
 	v.afterQuery()
 
-	value, err := getReflectSliceValue(v.dest)
+	err = scanFields(v.dest, rows)
 	if err != nil {
 		v.setErr(err)
-		return err
-	}
-	base, isPtr := getSliceBase(value)
-
-	for rows.Next() {
-		b := reflect.New(base).Elem()
-		if b.CanAddr() && b.CanInterface() {
-			rows.Scan(b.Addr().Interface())
-		}
-		if isPtr {
-			b = b.Addr()
-		}
-		value.Set(reflect.Append(value, b))
 	}
 
-	return nil
+	return err
 }
 
 func (v *Orm) GetFieldString(f interface{}) string {

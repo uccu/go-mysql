@@ -103,6 +103,10 @@ func TestQuery(t *testing.T) {
 
 }
 
+type useru struct {
+	Id int
+}
+
 func TestUpdate(t *testing.T) {
 	dbpool := getPool()
 	var orm *Orm
@@ -110,6 +114,10 @@ func TestUpdate(t *testing.T) {
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set("a")
 	assert.Equal(t, orm.Err(), ErrOddNumberOfParams)
+
+	orm = dbpool.Table("user")
+	orm.Exec(false).Set(useru{}).Update()
+	assert.Equal(t, orm.Sql, "UPDATE `t_user`")
 
 	orm = dbpool.Table("user")
 	orm.Exec(false).Set().Set("a", 1, "b", 3).Where("a", 1).Where("b", 3).Update()
@@ -267,7 +275,6 @@ func TestGetField(t *testing.T) {
 
 	err = dbpool.Table("user").Dest(&data).GetField("id-")
 	assert.NotNil(t, err)
-
 }
 
 func TestGetFields(t *testing.T) {
@@ -312,7 +319,8 @@ func TestResult(t *testing.T) {
 	_, err = dbpool.Table("user").Set(Raw("name=''")).Where(Raw("id=0")).Update()
 	assert.Nil(t, err)
 
-	err = dbpool.Table("user").Where(Raw("id=0")).Dest(user).FetchOne()
+	orm := dbpool.Table("user")
+	err = orm.Where(Raw("id=0")).Dest(user).FetchOne()
 	assert.Equal(t, err, ErrNoRows)
 }
 
@@ -322,12 +330,26 @@ type user2 struct {
 }
 
 type user3 struct {
-	Id int64 `json:"id"`
+	Id *int64 `json:"id"`
 	user4
 }
 
 type user4 struct {
 	Name string `json:"name"`
+}
+
+type user5 struct {
+	Id int64 `json:"id"`
+	*user4
+}
+
+type User7 struct {
+	Name string `json:"name"`
+}
+
+type user6 struct {
+	Id int64 `json:"id"`
+	*User7
 }
 
 func TestSelect(t *testing.T) {
@@ -389,6 +411,8 @@ func TestUtil(t *testing.T) {
 	dbpool := getPool()
 	orm := dbpool.Table("user").Dest("123")
 	assert.Equal(t, orm.Err(), ErrNotPointer)
+
+	assert.Equal(t, Mix("%t WW", 123).GetQuery(), "NULL WW")
 }
 
 func TestTx(t *testing.T) {
@@ -417,4 +441,47 @@ func TestTx(t *testing.T) {
 	_, err = dbpool.Table("user").Where("id", id).Delete()
 	assert.Nil(t, err)
 
+}
+
+func TestScan(t *testing.T) {
+
+	var err error
+	dbpool := getPool()
+	type DD string
+
+	var dest map[int]string
+	err = dbpool.Table("user").Dest(&dest).FetchOne()
+	assert.Equal(t, err, ErrNotStringMapKey)
+
+	var dest2 []string
+	err = dbpool.Table("user").Dest(&dest2).FetchOne()
+	assert.Equal(t, err, ErrNotStructOrMap)
+
+	err = dbpool.Table("user").FetchOne()
+	assert.Equal(t, err, ErrNoDest)
+
+	err = dbpool.Table("user").Dest(&dest).GetFields("name")
+	assert.Equal(t, err, ErrNotSlice)
+
+	var dest3 map[string]DD
+	err = dbpool.Table("user").Dest(&dest3).FetchOne()
+	assert.NotNil(t, err)
+
+	var dest4 []map[string]DD
+	err = dbpool.Table("user").Dest(&dest4).Limit(1).Select()
+	assert.NotNil(t, err)
+
+	var dest5 []DD
+	err = dbpool.Table("user").Dest(&dest5).Limit(1).GetFields("id")
+	assert.NotNil(t, err)
+
+	var dest6 user5
+	err = dbpool.Table("user").Dest(&dest6).FetchOne()
+	assert.Nil(t, err)
+	assert.Nil(t, dest6.user4)
+
+	var dest7 user6
+	err = dbpool.Table("user").Dest(&dest7).FetchOne()
+	assert.Nil(t, err)
+	assert.NotNil(t, dest7.User7)
 }
