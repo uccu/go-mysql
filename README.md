@@ -34,7 +34,7 @@ db.Table("user").Where("id", 2).Dest(&user).FetchOne()
 
 var users []*User
 db.Table("user").Where("id", 2).Dest(&users).Page(2, 10).Select()
-// sql: SELECT `id`, `name` FROM `t_user` WHERE `id`=?
+// sql: SELECT `id`, `name` FROM `t_user` WHERE `id`=? LIMIT ?,?
 // args: [2, 10, 10]
 
 user2 := &User{
@@ -132,7 +132,7 @@ var ids []int64 := db.Table("user").Order("id").GetFieldsInt("id")
 其他聚合, 基于GetField封装的快捷方法，`Count`查询数量，`Sum`查询总数(int64)，`SumFloat`查询总数浮点数版(float64)
 ```go
 var userCount int64 := db.Table("user").Count()
-var costTotal int64 := db.Table("user_cost").SumFloat("cost")
+var costTotal float64 := db.Table("user_cost").SumFloat("cost")
 ```
 
 #### 2.2 增删改
@@ -214,7 +214,7 @@ Table(string...)  // [库名.]名字[ 别名]
 ##### 2.4.6 Group
 分组
 ```go
-Group(string...)  // [库名.]名字[ 别名][,...]
+Group(string...)  // [库名.]名字[,...]
 ```
 
 ##### 2.4.7 Having
@@ -229,7 +229,7 @@ Having(struct) // 优先dbwhere, 后db标签
 ##### 2.4.8 Order
 排序
 ```go
-Order(string...)  // [库名.]名字[ 别名][,...]
+Order(string...)  // [库名.]名字[,...]
 ```
 
 ##### 2.4.9 Limit
@@ -273,7 +273,8 @@ o2 := db.Table("user").Where("id", 3).Union(o1).Select()
 ```go
 Exec(bool)
 eg:
-o1 := db.Table("user").Where("id", 2).Exec(false).Select()
+o1 := db.Table("user").Where("id", 2)
+o1.Exec(false).Select()
 fmt.Println(o1.Sql)
 ```
 
