@@ -10,7 +10,7 @@ jobs:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
-      - image: circleci/golang:1.17
+      - image: cimg/golang:1.17
     environment:
       CODECOV_TOKEN: 29e9c842-9b7f-4887-a2b9-77b9306bac36
     # Add steps to the job
@@ -23,7 +23,6 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            go env -w GOPROXY=https://goproxy.cn,direct
             go mod download
             go test -race -coverprofile=coverage.txt -covermode=atomic
       - save_cache:
