@@ -79,10 +79,6 @@ func TestField(t *testing.T) {
 	assert.Equal(t, orm.Sql, "SELECT `a`, `w` FROM `t_user` LIMIT ?")
 
 	orm = dbpool.Table("user")
-	orm.Exec(false).Fields([]interface{}{"a", "b"}).FetchOne()
-	assert.Equal(t, orm.Sql, "SELECT `a`, `b` FROM `t_user` LIMIT ?")
-
-	orm = dbpool.Table("user")
 	orm.Exec(false).Dest(&user{Id: 1, Name: "name"}).FetchOne()
 	assert.Equal(t, orm.Sql, "SELECT `id`, `name` FROM `t_user` LIMIT ?")
 }
@@ -299,6 +295,10 @@ func TestGetFields(t *testing.T) {
 
 	err = dbpool.Table("user").Dest(&data2).GetFields("id")
 	assert.Nil(t, err)
+
+	orm = dbpool.Table("user")
+	orm.Dest(&data2).GetFields(Raw("id"))
+	assert.Nil(t, err, orm.Sql)
 
 }
 

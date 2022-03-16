@@ -175,7 +175,7 @@ func (v *Orm) GetField(name interface{}) error {
 }
 
 // 获取单个字段的值的slice
-func (v *Orm) GetFields(name string) error {
+func (v *Orm) GetFields(name interface{}) error {
 	v.Field(name)
 
 	v.startQuery(SQL_SELECT)
@@ -237,13 +237,13 @@ func (v *Orm) Exist() bool {
 	return v.GetFieldInt(RawField("1")) != 0
 }
 
-func (v *Orm) GetFieldsString(name string) []string {
+func (v *Orm) GetFieldsString(name interface{}) []string {
 	data := []string{}
 	v.Dest(&data).GetFields(name)
 	return data
 }
 
-func (v *Orm) GetFieldsInt(name string) []int64 {
+func (v *Orm) GetFieldsInt(name interface{}) []int64 {
 	data := []int64{}
 	v.Dest(&data).GetFields(name)
 	return data

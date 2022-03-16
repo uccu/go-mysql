@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/uccu/go-mysql/field"
+	"github.com/uccu/go-mysql/mix"
 	"github.com/uccu/go-mysql/mx"
 	"github.com/uccu/go-mysql/table"
 	"github.com/uccu/go-stringify"
@@ -12,6 +13,10 @@ import (
 func (v *Orm) Fields(fields []interface{}) *Orm {
 	for _, f := range fields {
 
+		if k, ok := f.(*mix.Raw); ok {
+			v.addField(Field(k.GetQuery()))
+			continue
+		}
 		if k, ok := f.(mx.Field); ok {
 			v.addField(k)
 			continue
