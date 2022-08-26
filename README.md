@@ -66,7 +66,7 @@ db.WithPrefix("pre_")
 ```
 根据传入的值添加表名后缀:
 ```go
-db.WithPrefix(func(i interface{}) string {
+db.WithSuffix(func(i interface{}) string {
     return "_" + strconv.FormatInt(int64(i.(int)%3), 10)
 })
 ```
